@@ -9,8 +9,8 @@ data class UsernameError(val message: String)
 @JvmInline
 value class Username private constructor(val value: String) {
     companion object {
-        private const val USERNAME_MIN_LENGTH = 3
-        private const val USERNAME_MAX_LENGTH = 20
+        private const val USERNAME_MIN_LENGTH = 6
+        private const val USERNAME_MAX_LENGTH = 16
         private val usernameRegex = Regex("^[a-zA-Z0-9_]+$")
 
         fun create(username: String): Either<UsernameError, Username> = either {
