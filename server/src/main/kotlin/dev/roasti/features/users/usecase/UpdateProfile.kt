@@ -1,21 +1,22 @@
 package dev.roasti.features.users.usecase
 
 import arrow.core.Either
+import arrow.core.NonEmptyList
 import arrow.core.raise.either
+import dev.roasti.common.api.FieldError
 import dev.roasti.features.users.UpdateUserError
 import dev.roasti.features.users.UpdateUserFields
 import dev.roasti.features.users.UserRepository
 import dev.roasti.features.users.model.User
 import dev.roasti.features.users.model.UserId
 import dev.roasti.features.users.model.Username
-import dev.roasti.features.users.model.UsernameError
 
 sealed interface UpdateProfileError {
   data object NotFound : UpdateProfileError
 
   data object UsernameTaken : UpdateProfileError
 
-  data class InvalidUsername(val error: UsernameError) : UpdateProfileError
+  data class InvalidInput(val errors: NonEmptyList<FieldError>) : UpdateProfileError
 }
 
 data class UpdateProfileInput(
@@ -32,7 +33,7 @@ class UpdateProfile(private val repo: UserRepository) {
   ): Either<UpdateProfileError, User> = either {
     val username =
         input.username?.let {
-          Username.create(it).mapLeft { e -> UpdateProfileError.InvalidUsername(e) }.bind()
+          Username.create(it).mapLeft { errs -> UpdateProfileError.InvalidInput(errs) }.bind()
         }
 
     repo

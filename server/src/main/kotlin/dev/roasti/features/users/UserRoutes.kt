@@ -5,6 +5,7 @@ import dev.roasti.FirebasePrincipal
 import dev.roasti.common.api.ApiError
 import dev.roasti.common.api.ApiErrorCode
 import dev.roasti.common.api.respondError
+import dev.roasti.common.api.toHttp
 import dev.roasti.feature.auth.data.network.model.request.UpdateProfileRequest
 import dev.roasti.feature.auth.data.network.model.response.UserDto
 import dev.roasti.features.users.model.User
@@ -115,8 +116,7 @@ private fun GetUserError.toHttp() =
 
 private fun UpdateProfileError.toHttp() =
     when (this) {
-      is UpdateProfileError.InvalidUsername ->
-          HttpStatusCode.UnprocessableEntity to ApiError(ApiErrorCode.INVALID_INPUT, error.message)
+      is UpdateProfileError.InvalidInput -> errors.toHttp()
 
       UpdateProfileError.NotFound ->
           HttpStatusCode.NotFound to ApiError(ApiErrorCode.USER_NOT_FOUND, "user not found")

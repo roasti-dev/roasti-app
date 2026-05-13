@@ -1,23 +1,25 @@
 package dev.roasti.features.auth
 
 import arrow.core.Either
+import arrow.core.NonEmptyList
 import arrow.core.raise.either
 import arrow.core.raise.ensure
+import arrow.core.raise.zipOrAccumulate
 import com.google.firebase.auth.AuthErrorCode as FirebaseAuthErrorCode
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.UserRecord
+import dev.roasti.common.ValidationResult
+import dev.roasti.common.api.FieldError
 import dev.roasti.feature.auth.data.network.model.request.RegisterRequestDto
 import dev.roasti.feature.auth.data.network.model.response.AuthResponseDto
 import dev.roasti.feature.auth.data.network.model.response.RefreshResponseDto
 import dev.roasti.features.users.UserRepository
 import dev.roasti.features.users.model.Email
-import dev.roasti.features.users.model.EmailError
 import dev.roasti.features.users.model.FirebaseId
 import dev.roasti.features.users.model.User
 import dev.roasti.features.users.model.UserId
 import dev.roasti.features.users.model.Username
-import dev.roasti.features.users.model.UsernameError
 import dev.roasti.features.users.toDto
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
@@ -31,11 +33,7 @@ sealed interface RegisterError {
 
   data object EmailTaken : RegisterError
 
-  data class InvalidUsername(val error: UsernameError) : RegisterError
-
-  data class InvalidEmail(val error: EmailError) : RegisterError
-
-  data class InvalidPassword(val error: PasswordError) : RegisterError
+  data class InvalidInput(val errors: NonEmptyList<FieldError>) : RegisterError
 }
 
 sealed interface LoginError {
@@ -47,8 +45,6 @@ sealed interface LoginError {
 sealed interface RefreshError {
   data object InvalidRefreshToken : RefreshError
 }
-
-data class PasswordError(val message: String)
 
 interface AuthService {
   suspend fun register(request: RegisterRequestDto): Either<RegisterError, AuthResponseDto>
@@ -70,58 +66,68 @@ class AuthServiceImpl(
   @OptIn(ExperimentalUuidApi::class)
   override suspend fun register(
       request: RegisterRequestDto
-  ): Either<RegisterError, AuthResponseDto> = either {
-    validatePassword(request.password).mapLeft { RegisterError.InvalidPassword(it) }.bind()
-    val username =
-        Username.create(request.username).mapLeft { RegisterError.InvalidUsername(it) }.bind()
-    val email = Email.create(request.email).mapLeft { RegisterError.InvalidEmail(it) }.bind()
+  ): Either<RegisterError, AuthResponseDto> {
+    val validation =
+        Either.zipOrAccumulate(
+                { e1, e2 -> e1 + e2 },
+                Username.create(request.username),
+                Email.create(request.email),
+                validatePassword(request.password),
+            ) { username, email, _ ->
+              Pair(username, email)
+            }
+            .mapLeft { RegisterError.InvalidInput(it) }
 
-    ensure(!userRepo.existsByUsername(username)) { RegisterError.UsernameTaken }
-    ensure(!userRepo.existsByEmail(email)) { RegisterError.EmailTaken }
+    return either {
+      val (username, email) = validation.bind()
 
-    val firebaseUser =
-        try {
-          firebaseAuth.createUser(
-              UserRecord.CreateRequest().setEmail(email.value).setPassword(request.password)
-          )
-        } catch (e: FirebaseAuthException) {
-          when (e.authErrorCode) {
-            FirebaseAuthErrorCode.EMAIL_ALREADY_EXISTS -> raise(RegisterError.EmailTaken)
-            else -> throw e
-          }
-        }
+      ensure(!userRepo.existsByUsername(username)) { RegisterError.UsernameTaken }
+      ensure(!userRepo.existsByEmail(email)) { RegisterError.EmailTaken }
 
-    val id = Uuid.random()
-    val customClaims = mapOf("id" to id.toString())
-    try {
-      firebaseAuth.updateUser(firebaseUser.updateRequest().setCustomClaims(customClaims))
-    } catch (e: FirebaseAuthException) {
-      when (e.authErrorCode) {
-        FirebaseAuthErrorCode.EMAIL_ALREADY_EXISTS -> raise(RegisterError.EmailTaken)
-        else -> throw e
-      }
-    }
-
-    val user =
-        userRepo.create(
-            User(
-                id = UserId(id),
-                firebaseId = FirebaseId(firebaseUser.uid),
-                email = email,
-                username = username,
-                name = request.name,
-                avatarId = request.avatarId,
-                bio = request.bio,
-                createdAt = Clock.System.now(),
+      val firebaseUser =
+          try {
+            firebaseAuth.createUser(
+                UserRecord.CreateRequest().setEmail(email.value).setPassword(request.password)
             )
-        )
+          } catch (e: FirebaseAuthException) {
+            when (e.authErrorCode) {
+              FirebaseAuthErrorCode.EMAIL_ALREADY_EXISTS -> raise(RegisterError.EmailTaken)
+              else -> throw e
+            }
+          }
 
-    val tokens = signer.signInWithPassword(email.value, request.password)
-    AuthResponseDto(
-        accessToken = tokens.idToken,
-        refreshToken = tokens.refreshToken,
-        user = user.toDto(),
-    )
+      val id = Uuid.random()
+      val customClaims = mapOf("id" to id.toString())
+      try {
+        firebaseAuth.updateUser(firebaseUser.updateRequest().setCustomClaims(customClaims))
+      } catch (e: FirebaseAuthException) {
+        when (e.authErrorCode) {
+          FirebaseAuthErrorCode.EMAIL_ALREADY_EXISTS -> raise(RegisterError.EmailTaken)
+          else -> throw e
+        }
+      }
+
+      val user =
+          userRepo.create(
+              User(
+                  id = UserId(id),
+                  firebaseId = FirebaseId(firebaseUser.uid),
+                  email = email,
+                  username = username,
+                  name = request.name,
+                  avatarId = request.avatarId,
+                  bio = request.bio,
+                  createdAt = Clock.System.now(),
+              )
+          )
+
+      val tokens = signer.signInWithPassword(email.value, request.password)
+      AuthResponseDto(
+          accessToken = tokens.idToken,
+          refreshToken = tokens.refreshToken,
+          user = user.toDto(),
+      )
+    }
   }
 
   override suspend fun login(
@@ -160,10 +166,15 @@ class AuthServiceImpl(
     revokedTokens.add(refreshToken)
   }
 
-  private fun validatePassword(password: String): Either<PasswordError, Unit> = either {
-    ensure(password.length >= PASSWORD_MIN_LENGTH) { PasswordError("password too short") }
-    ensure(password.length <= PASSWORD_MAX_LENGTH) { PasswordError("password too long") }
-  }
+  private fun validatePassword(password: String): ValidationResult<Unit> =
+      either {
+            zipOrAccumulate(
+                { ensure(password.length >= PASSWORD_MIN_LENGTH) { "password too short" } },
+                { ensure(password.length <= PASSWORD_MAX_LENGTH) { "password too long" } },
+            ) { _, _ ->
+            }
+          }
+          .mapLeft { it.map { msg -> FieldError("password", msg) } }
 
   private fun AuthException.toLoginError(): LoginError =
       when (this) {

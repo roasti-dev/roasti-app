@@ -1,5 +1,6 @@
 package dev.roasti.common.api
 
+import arrow.core.NonEmptyList
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.response.respond
@@ -23,7 +24,22 @@ enum class ApiErrorCode {
   INVALID_REFRESH_TOKEN,
 }
 
-@Serializable data class ApiError(val code: ApiErrorCode, val message: String)
+@Serializable data class FieldError(val field: String, val message: String)
+
+@Serializable
+data class ApiError(
+    val code: ApiErrorCode,
+    val message: String,
+    val details: List<FieldError>? = null,
+)
+
+fun NonEmptyList<FieldError>.toHttp(): Pair<HttpStatusCode, ApiError> =
+    HttpStatusCode.UnprocessableEntity to
+        ApiError(
+            code = ApiErrorCode.INVALID_INPUT,
+            message = "validation failed",
+            details = toList(),
+        )
 
 suspend fun <E> ApplicationCall.respondError(
     error: E,

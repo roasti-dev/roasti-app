@@ -1,7 +1,6 @@
 package dev.roasti.features.users.model
 
 import kotlin.test.Test
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class EmailTest {
@@ -39,6 +38,6 @@ class EmailTest {
   @Test
   fun `error contains message`() {
     val result = Email.create("notanemail")
-    result.onLeft { assertNotNull(it.message) }
+    result.onLeft { assertTrue(it.isNotEmpty()) }
   }
 }

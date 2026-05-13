@@ -1,10 +1,10 @@
 package dev.roasti.features.users.model
 
-import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
-
-data class UsernameError(val message: String)
+import arrow.core.raise.zipOrAccumulate
+import dev.roasti.common.ValidationResult
+import dev.roasti.common.api.FieldError
 
 @JvmInline
 value class Username private constructor(val value: String) {
@@ -13,12 +13,20 @@ value class Username private constructor(val value: String) {
     private const val USERNAME_MAX_LENGTH = 16
     private val usernameRegex = Regex("^[a-zA-Z0-9_]+$")
 
-    fun create(username: String): Either<UsernameError, Username> = either {
-      ensure(username.length >= USERNAME_MIN_LENGTH) { UsernameError("username too short") }
-      ensure(username.length <= USERNAME_MAX_LENGTH) { UsernameError("username too long") }
-      ensure(usernameRegex.matches(username)) { UsernameError("username contains invalid chars") }
-      Username(username)
-    }
+    fun create(username: String): ValidationResult<Username> =
+        either {
+              zipOrAccumulate(
+                  {
+                    ensure(username.length in USERNAME_MIN_LENGTH..USERNAME_MAX_LENGTH) {
+                      "username must be $USERNAME_MIN_LENGTH-$USERNAME_MAX_LENGTH characters"
+                    }
+                  },
+                  { ensure(usernameRegex.matches(username)) { "username contains invalid chars" } },
+              ) { _, _ ->
+                Username(username)
+              }
+            }
+            .mapLeft { it.map { msg -> FieldError("username", msg) } }
 
     fun fromDb(trustedRaw: String): Username = Username(trustedRaw)
   }

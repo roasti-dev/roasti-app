@@ -4,6 +4,7 @@ import dev.roasti.FIREBASE_AUTH
 import dev.roasti.common.api.ApiError
 import dev.roasti.common.api.ApiErrorCode
 import dev.roasti.common.api.respondError
+import dev.roasti.common.api.toHttp
 import dev.roasti.feature.auth.data.network.model.request.LoginRequestDto
 import dev.roasti.feature.auth.data.network.model.request.RegisterRequestDto
 import io.ktor.http.HttpStatusCode
@@ -74,14 +75,7 @@ private fun RegisterError.toHttp() =
       RegisterError.EmailTaken ->
           HttpStatusCode.Conflict to ApiError(ApiErrorCode.EMAIL_TAKEN, "email is already taken")
 
-      is RegisterError.InvalidUsername ->
-          HttpStatusCode.UnprocessableEntity to ApiError(ApiErrorCode.INVALID_INPUT, error.message)
-
-      is RegisterError.InvalidPassword ->
-          HttpStatusCode.UnprocessableEntity to ApiError(ApiErrorCode.INVALID_INPUT, error.message)
-
-      is RegisterError.InvalidEmail ->
-          HttpStatusCode.UnprocessableEntity to ApiError(ApiErrorCode.INVALID_INPUT, error.message)
+      is RegisterError.InvalidInput -> errors.toHttp()
     }
 
 private fun LoginError.toHttp() =
