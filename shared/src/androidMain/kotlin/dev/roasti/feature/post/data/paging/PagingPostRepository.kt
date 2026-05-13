@@ -19,7 +19,6 @@ import dev.roasti.feature.post.data.mapper.toVoteDirection
 import dev.roasti.feature.post.data.mapper.toWireString
 import dev.roasti.feature.post.data.mapper.upsertPost
 import dev.roasti.feature.post.data.network.PostsApiClient
-import dev.roasti.feature.post.data.remote.model.VoteDirectionDto
 import dev.roasti.feature.post.data.remote.model.request.CreatePostRequestDto
 import dev.roasti.feature.post.data.remote.model.request.UpdatePostRequestDto
 import dev.roasti.feature.post.data.remote.model.request.VoteRequestDto
@@ -94,7 +93,7 @@ class PagingPostRepository(
                 db.transaction {
                     db.postQueries.applyVote(
                         rating = dto.rating.toLong(),
-                        user_vote = (dto.userVote ?: VoteDirectionDto.NONE).toDomain().toWireString(),
+                        user_vote = dto.userVote.toDomain().toWireString(),
                         id = postId,
                     )
                 }
