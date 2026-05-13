@@ -38,11 +38,13 @@ import dev.roasti.features.auth.RevokedTokenTable
 import dev.roasti.features.auth.authRoutes
 import dev.roasti.features.users.UserRepository
 import dev.roasti.features.users.UserRepositoryImpl
-import dev.roasti.features.users.UserService
-import dev.roasti.features.users.UserServiceImpl
-import dev.roasti.features.users.UserId
+import dev.roasti.features.users.model.UserId
 import dev.roasti.features.users.UserTable
 import dev.roasti.features.users.userRoutes
+import dev.roasti.features.users.usecase.CheckUsernameAvailability
+import dev.roasti.features.users.usecase.GetCurrentUser
+import dev.roasti.features.users.usecase.GetUserProfile
+import dev.roasti.features.users.usecase.UpdateProfile
 import dev.roasti.features.comments.CommentRepository
 import dev.roasti.features.comments.CommentRepositoryImpl
 import dev.roasti.features.comments.CommentService
@@ -113,7 +115,10 @@ fun Application.module() {
     install(Koin) {
         modules(module {
             single<UserRepository> { UserRepositoryImpl() }
-            single<UserService> { UserServiceImpl(get()) }
+            single { GetCurrentUser(get()) }
+            single { GetUserProfile(get()) }
+            single { UpdateProfile(get()) }
+            single { CheckUsernameAvailability(get()) }
             single<FirebaseSigner> { FirebaseSignerImpl(firebaseApiKey, identityBaseUrl, tokenBaseUrl) }
             single<RevokedTokenRepository> { RevokedTokenRepositoryImpl() }
             single { FirebaseAuth.getInstance() }
@@ -130,7 +135,7 @@ fun Application.module() {
             single<FileStorage> { LocalFileStorage(uploadsDir) }
             single<UploadRepository> { UploadRepositoryImpl() }
             single<UploadService> { UploadServiceImpl(get(), get()) }
-            single<AuthService> { AuthServiceImpl(get(), get(), get(), get(), get()) }
+            single<AuthService> { AuthServiceImpl(get(), get(), get(), get()) }
         })
     }
 

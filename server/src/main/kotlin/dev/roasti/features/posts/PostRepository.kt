@@ -12,7 +12,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import dev.roasti.features.recipes.RecipeId
 import dev.roasti.features.users.UserTable
-import dev.roasti.features.users.UserId
+import dev.roasti.features.users.model.UserId
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid

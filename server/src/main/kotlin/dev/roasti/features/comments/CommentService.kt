@@ -6,7 +6,7 @@ import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.right
 import dev.roasti.common.domain.Page
-import dev.roasti.features.users.UserId
+import dev.roasti.features.users.model.UserId
 import kotlin.uuid.Uuid
 
 const val TEXT_MAX_LENGTH = 1000

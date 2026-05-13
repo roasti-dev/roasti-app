@@ -41,7 +41,7 @@ import dev.roasti.features.comments.CommentThread
 import dev.roasti.features.comments.toHttp
 import dev.roasti.features.comments.toDto
 import dev.roasti.features.likes.LikeInfo
-import dev.roasti.features.users.UserId
+import dev.roasti.features.users.model.UserId
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 

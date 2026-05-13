@@ -19,6 +19,14 @@ import dev.roasti.FirebasePrincipal
 import dev.roasti.common.api.ApiError
 import dev.roasti.common.api.ApiErrorCode
 import dev.roasti.common.api.respondError
+import dev.roasti.features.users.model.User
+import dev.roasti.features.users.usecase.CheckUsernameAvailability
+import dev.roasti.features.users.usecase.GetCurrentUser
+import dev.roasti.features.users.usecase.GetUserProfile
+import dev.roasti.features.users.usecase.GetUserError
+import dev.roasti.features.users.usecase.UpdateProfile
+import dev.roasti.features.users.usecase.UpdateProfileError
+import dev.roasti.features.users.usecase.UpdateProfileInput
 import kotlin.uuid.ExperimentalUuidApi
 
 @Serializable
@@ -27,32 +35,39 @@ data class UsernameAvailabilityResponse(
 )
 
 fun Route.userRoutes() {
-    val userService by inject<UserService>()
+    val getCurrentUser by inject<GetCurrentUser>()
+    val getUserProfile by inject<GetUserProfile>()
+    val updateProfile by inject<UpdateProfile>()
+    val checkUsernameAvailability by inject<CheckUsernameAvailability>()
 
     route("/users") {
         authenticate(FIREBASE_AUTH) {
-            get("/me") {
-                val userId = call.principal<FirebasePrincipal>()!!.id
-                userService.getById(userId).fold(
-                    ifLeft = { call.respondError(it, GetUserError::toHttp) },
-                    ifRight = { call.respond(it.toDto()) },
-                )
-            }
+            route("me") {
+                get {
+                    val userId = call.principal<FirebasePrincipal>()?.id
+                        ?: return@get call.respond(HttpStatusCode.Unauthorized)
+                    getCurrentUser(userId).fold(
+                        ifLeft = { call.respondError(it, GetUserError::toHttp) },
+                        ifRight = { call.respond(it.toDto()) },
+                    )
+                }
 
-            patch("/me") {
-                val userId = call.principal<FirebasePrincipal>()!!.id
-                // TODO: support explicit null to clear nullable fields (name, bio, avatarId)
-                val body = call.receive<UpdateProfileRequest>()
-                val fields = UpdateUserFields(
-                    username = body.username,
-                    name = body.name,
-                    bio = body.bio,
-                    avatarId = body.imageId,
-                )
-                userService.updateProfile(userId, fields).fold(
-                    ifLeft = { call.respondError(it, UpdateProfileError::toHttp) },
-                    ifRight = { call.respond(it.toDto()) },
-                )
+                patch {
+                    val userId = call.principal<FirebasePrincipal>()?.id
+                        ?: return@patch call.respond(HttpStatusCode.Unauthorized)
+                    // TODO: support explicit null to clear nullable fields (name, bio, avatarId)
+                    val body = call.receive<UpdateProfileRequest>()
+                    val input = UpdateProfileInput(
+                        username = body.username,
+                        name = body.name,
+                        bio = body.bio,
+                        avatarId = body.imageId,
+                    )
+                    updateProfile(userId, input).fold(
+                        ifLeft = { call.respondError(it, UpdateProfileError::toHttp) },
+                        ifRight = { call.respond(it.toDto()) },
+                    )
+                }
             }
         }
 
@@ -62,13 +77,13 @@ fun Route.userRoutes() {
                     HttpStatusCode.BadRequest,
                     "username query param required"
                 )
-            call.respond(UsernameAvailabilityResponse(userService.checkUsernameAvailability(username)))
+            call.respond(UsernameAvailabilityResponse(checkUsernameAvailability(username)))
         }
 
         get("/{username}") {
             val username = call.parameters["username"]!!
             // TODO: public profile should not expose email — use a separate DTO without email field
-            userService.getByUsername(username).fold(
+            getUserProfile(username).fold(
                 ifLeft = { call.respondError(it, GetUserError::toHttp) },
                 ifRight = { call.respond(it.toDto()) },
             )
@@ -79,8 +94,8 @@ fun Route.userRoutes() {
 @OptIn(ExperimentalUuidApi::class)
 fun User.toDto() = UserDto(
     id = id.value.toString(),
-    email = email,
-    username = username,
+    email = email.value,
+    username = username.value,
     name = name,
     avatarId = avatarId,
     bio = bio,
@@ -102,6 +117,7 @@ private fun UpdateProfileError.toHttp() = when (this) {
         ApiErrorCode.USER_NOT_FOUND,
         "user not found"
     )
+
     UpdateProfileError.UsernameTaken -> HttpStatusCode.Conflict to ApiError(
         ApiErrorCode.USERNAME_TAKEN,
         "name is unavailable"

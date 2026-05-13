@@ -10,7 +10,7 @@ import dev.roasti.feature.recipe.domain.model.BrewMethod
 import dev.roasti.feature.recipe.domain.model.Difficulty
 import dev.roasti.feature.recipe.domain.model.RoastLevel
 import dev.roasti.features.users.UserTable
-import dev.roasti.features.users.UserPreview
+import dev.roasti.features.users.model.UserPreview
 import dev.roasti.features.users.toUserPreview
 import kotlin.uuid.ExperimentalUuidApi
 

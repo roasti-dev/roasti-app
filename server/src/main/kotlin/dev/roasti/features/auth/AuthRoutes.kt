@@ -81,6 +81,11 @@ private fun RegisterError.toHttp() = when (this) {
         ApiErrorCode.INVALID_INPUT,
         error.message
     )
+
+    is RegisterError.InvalidEmail -> HttpStatusCode.UnprocessableEntity to ApiError(
+        ApiErrorCode.INVALID_INPUT,
+        error.message
+    )
 }
 
 private fun LoginError.toHttp() = when (this) {

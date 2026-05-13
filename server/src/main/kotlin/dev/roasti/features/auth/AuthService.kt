@@ -1,25 +1,25 @@
 package dev.roasti.features.auth
 
 import arrow.core.Either
-import arrow.core.left
-import arrow.core.raise.context.bind
 import arrow.core.raise.either
 import arrow.core.raise.ensure
-import arrow.core.right
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.UserRecord
 import com.google.firebase.auth.AuthErrorCode as FirebaseAuthErrorCode
-import dev.roasti.features.users.CreateUserInput
-import dev.roasti.features.users.UserId
+import dev.roasti.features.users.model.UserId
 import dev.roasti.features.users.UserRepository
-import dev.roasti.features.users.UserService
 import dev.roasti.feature.auth.data.network.model.request.RegisterRequestDto
 import dev.roasti.feature.auth.data.network.model.response.AuthResponseDto
 import dev.roasti.feature.auth.data.network.model.response.RefreshResponseDto
-import dev.roasti.features.users.FirebaseId
-import dev.roasti.features.users.UsernameValidationError
+import dev.roasti.features.users.model.Email
+import dev.roasti.features.users.model.EmailError
+import dev.roasti.features.users.model.FirebaseId
+import dev.roasti.features.users.model.User
+import dev.roasti.features.users.model.Username
+import dev.roasti.features.users.model.UsernameError
 import dev.roasti.features.users.toDto
+import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -30,8 +30,9 @@ sealed interface RegisterError {
     data object UsernameTaken : RegisterError
     data object EmailTaken : RegisterError
 
-    data class InvalidUsername(val error: UsernameValidationError) : RegisterError
-    data class InvalidPassword(val error: PasswordValidationError) : RegisterError
+    data class InvalidUsername(val error: UsernameError) : RegisterError
+    data class InvalidEmail(val error: EmailError) : RegisterError
+    data class InvalidPassword(val error: PasswordError) : RegisterError
 }
 
 sealed interface LoginError {
@@ -43,7 +44,7 @@ sealed interface RefreshError {
     data object InvalidRefreshToken : RefreshError
 }
 
-data class PasswordValidationError(val message: String)
+data class PasswordError(val message: String)
 
 interface AuthService {
     suspend fun register(request: RegisterRequestDto): Either<RegisterError, AuthResponseDto>
@@ -54,7 +55,6 @@ interface AuthService {
 
 class AuthServiceImpl(
     private val userRepo: UserRepository,
-    private val userService: UserService,
     private val signer: FirebaseSigner,
     private val revokedTokens: RevokedTokenRepository,
     private val firebaseAuth: FirebaseAuth,
@@ -64,16 +64,18 @@ class AuthServiceImpl(
     override suspend fun register(request: RegisterRequestDto): Either<RegisterError, AuthResponseDto> =
         either {
             validatePassword(request.password).mapLeft { RegisterError.InvalidPassword(it) }.bind()
-            userService.validateUsername(request.username)
+            val username = Username.create(request.username)
                 .mapLeft { RegisterError.InvalidUsername(it) }.bind()
+            val email = Email.create(request.email)
+                .mapLeft { RegisterError.InvalidEmail(it) }.bind()
 
-            ensure(!userRepo.existsByUsername(request.username)) { RegisterError.UsernameTaken }
-            ensure(!userRepo.existsByEmail(request.email)) { RegisterError.EmailTaken }
+            ensure(!userRepo.existsByUsername(username)) { RegisterError.UsernameTaken }
+            ensure(!userRepo.existsByEmail(email)) { RegisterError.EmailTaken }
 
             val firebaseUser = try {
                 firebaseAuth.createUser(
                     UserRecord.CreateRequest()
-                        .setEmail(request.email)
+                        .setEmail(email.value)
                         .setPassword(request.password)
                 )
             } catch (e: FirebaseAuthException) {
@@ -95,18 +97,19 @@ class AuthServiceImpl(
             }
 
             val user = userRepo.create(
-                CreateUserInput(
+                User(
                     id = UserId(id),
                     firebaseId = FirebaseId(firebaseUser.uid),
-                    email = request.email,
-                    username = request.username,
+                    email = email,
+                    username = username,
                     name = request.name,
                     avatarId = request.avatarId,
                     bio = request.bio,
+                    createdAt = Clock.System.now()
                 )
             )
 
-            val tokens = signer.signInWithPassword(request.email, request.password)
+            val tokens = signer.signInWithPassword(email.value, request.password)
             AuthResponseDto(
                 accessToken = tokens.idToken,
                 refreshToken = tokens.refreshToken,
@@ -118,10 +121,14 @@ class AuthServiceImpl(
         username: String,
         password: String
     ): Either<LoginError, AuthResponseDto> = either {
+
+        val username = Username.create(username)
+            .mapLeft { LoginError.InvalidCredentials }.bind()
+
         val user =
             userRepo.findByUsername(username) ?: raise(LoginError.InvalidCredentials)
         val tokens = try {
-            signer.signInWithPassword(user.email, password)
+            signer.signInWithPassword(user.email.value, password)
         } catch (e: AuthException) {
             raise(e.toLoginError())
         }
@@ -150,9 +157,9 @@ class AuthServiceImpl(
         revokedTokens.add(refreshToken)
     }
 
-    private fun validatePassword(password: String): Either<PasswordValidationError, Unit> = either {
-        ensure(password.length >= PASSWORD_MIN_LENGTH) { PasswordValidationError("password too short") }
-        ensure(password.length <= PASSWORD_MAX_LENGTH) { PasswordValidationError("password too long") }
+    private fun validatePassword(password: String): Either<PasswordError, Unit> = either {
+        ensure(password.length >= PASSWORD_MIN_LENGTH) { PasswordError("password too short") }
+        ensure(password.length <= PASSWORD_MAX_LENGTH) { PasswordError("password too long") }
     }
 
     private fun AuthException.toLoginError(): LoginError = when (this) {

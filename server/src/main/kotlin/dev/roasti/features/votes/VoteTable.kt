@@ -3,7 +3,7 @@ package dev.roasti.features.votes
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.datetime.timestamp
-import dev.roasti.features.users.UserId
+import dev.roasti.features.users.model.UserId
 import dev.roasti.features.users.UserTable
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi

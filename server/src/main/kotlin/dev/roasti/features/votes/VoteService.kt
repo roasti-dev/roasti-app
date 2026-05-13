@@ -1,6 +1,6 @@
 package dev.roasti.features.votes
 
-import dev.roasti.features.users.UserId
+import dev.roasti.features.users.model.UserId
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 

@@ -3,7 +3,7 @@ package dev.roasti.features.likes
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.dao.id.UuidTable
 import org.jetbrains.exposed.v1.datetime.timestamp
-import dev.roasti.features.users.UserId
+import dev.roasti.features.users.model.UserId
 import dev.roasti.features.users.UserTable
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi

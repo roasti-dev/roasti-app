@@ -3,7 +3,7 @@ package dev.roasti.features.recipes
 import dev.roasti.feature.recipe.domain.model.BrewMethod
 import dev.roasti.feature.recipe.domain.model.Difficulty
 import dev.roasti.feature.recipe.domain.model.RoastLevel
-import dev.roasti.features.users.UserPreview
+import dev.roasti.features.users.model.UserPreview
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid

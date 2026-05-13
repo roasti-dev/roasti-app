@@ -12,14 +12,11 @@ import dev.roasti.common.domain.Page
 import dev.roasti.features.likes.LikeService
 import dev.roasti.features.likes.LikeTargetType
 import arrow.core.Either
-import arrow.core.left
-import arrow.core.raise.context.bind
 import arrow.core.raise.either
 import arrow.core.raise.ensure
-import arrow.core.right
 import dev.roasti.features.comments.CreateCommentError
 import dev.roasti.features.likes.LikeInfo
-import dev.roasti.features.users.UserId
+import dev.roasti.features.users.model.UserId
 import kotlin.uuid.ExperimentalUuidApi
 
 sealed interface GetRecipeError {

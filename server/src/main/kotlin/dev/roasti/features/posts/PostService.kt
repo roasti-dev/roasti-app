@@ -13,7 +13,7 @@ import dev.roasti.features.comments.CommentService
 import dev.roasti.features.comments.CreateCommentError
 import dev.roasti.features.recipes.RecipeService
 import dev.roasti.features.uploads.UploadService
-import dev.roasti.features.users.UserId
+import dev.roasti.features.users.model.UserId
 import dev.roasti.features.votes.VoteDirection
 import dev.roasti.features.votes.VoteInfo
 import dev.roasti.features.votes.VoteService

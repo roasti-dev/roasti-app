@@ -1,6 +1,6 @@
 package dev.roasti.features.comments
 
-import dev.roasti.features.users.UserPreview
+import dev.roasti.features.users.model.UserPreview
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid

@@ -40,8 +40,8 @@ import dev.roasti.features.comments.CommentThread
 import dev.roasti.features.comments.toHttp
 import dev.roasti.features.comments.toDto
 import dev.roasti.features.recipes.RecipeId
-import dev.roasti.features.users.UserId
-import dev.roasti.features.users.UserPreview
+import dev.roasti.features.users.model.UserId
+import dev.roasti.features.users.model.UserPreview
 import dev.roasti.features.votes.VoteDirection
 import dev.roasti.features.votes.VoteInfo
 import kotlin.uuid.ExperimentalUuidApi

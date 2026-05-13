@@ -1,6 +1,6 @@
 package dev.roasti.features.likes
 
-import dev.roasti.features.users.UserId
+import dev.roasti.features.users.model.UserId
 import kotlin.uuid.Uuid
 
 

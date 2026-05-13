@@ -6,7 +6,7 @@ import org.jetbrains.exposed.v1.core.dao.id.UuidTable
 import org.jetbrains.exposed.v1.datetime.timestamp
 import dev.roasti.features.recipes.RecipeTable
 import dev.roasti.features.users.UserTable
-import dev.roasti.features.users.UserPreview
+import dev.roasti.features.users.model.UserPreview
 import dev.roasti.features.users.toUserPreview
 import dev.roasti.features.votes.VoteInfo
 import kotlin.uuid.ExperimentalUuidApi

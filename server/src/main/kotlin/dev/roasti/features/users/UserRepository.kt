@@ -1,8 +1,14 @@
 package dev.roasti.features.users
 
+import arrow.core.Either
+import dev.roasti.features.users.model.Email
+import dev.roasti.features.users.model.User
+import dev.roasti.features.users.model.UserId
+import dev.roasti.features.users.model.Username
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -10,13 +16,18 @@ import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 
+sealed interface UpdateUserError {
+    data object NotFound : UpdateUserError
+    data object UsernameConflict : UpdateUserError
+}
+
 interface UserRepository {
     suspend fun findById(id: UserId): User?
-    suspend fun findByUsername(username: String): User?
-    suspend fun create(input: CreateUserInput): User
-    suspend fun update(id: UserId, fields: UpdateUserFields)
-    suspend fun existsByUsername(username: String): Boolean
-    suspend fun existsByEmail(email: String): Boolean
+    suspend fun findByUsername(username: Username): User?
+    suspend fun create(input: User): User
+    suspend fun update(id: UserId, fields: UpdateUserFields): Either<UpdateUserError, User>
+    suspend fun existsByUsername(username: Username): Boolean
+    suspend fun existsByEmail(email: Email): Boolean
 }
 
 @OptIn(ExperimentalUuidApi::class)
@@ -31,74 +42,77 @@ class UserRepositoryImpl : UserRepository {
         }
     }
 
-    override suspend fun findByUsername(username: String): User? = withContext(Dispatchers.IO) {
+    override suspend fun findByUsername(username: Username): User? = withContext(Dispatchers.IO) {
         transaction {
             UserTable.selectAll()
-                .where { UserTable.username eq username }
+                .where { UserTable.username eq username.value }
                 .singleOrNull()
                 ?.toUser()
         }
     }
 
-    override suspend fun create(input: CreateUserInput): User = withContext(Dispatchers.IO) {
+    override suspend fun create(input: User): User = withContext(Dispatchers.IO) {
+        // insert + select instead of insertReturning: H2 (used in tests) doesn't support RETURNING clause
         transaction {
+            val createdAt = Clock.System.now()
             UserTable.insert {
                 it[id] = input.id.value
                 it[firebaseId] = input.firebaseId.value
-                it[email] = input.email
-                it[username] = input.username
+                it[email] = input.email.value
+                it[username] = input.username.value
                 it[name] = input.name
                 it[avatarId] = input.avatarId
                 it[bio] = input.bio
-                it[createdAt] = Clock.System.now()
+                it[UserTable.createdAt] = createdAt
             }
             UserTable.selectAll()
                 .where { UserTable.id eq input.id.value }
-                .single()
-                .toUser()
+                .single().toUser()
         }
     }
 
-    override suspend fun update(id: UserId, fields: UpdateUserFields): Unit = withContext(Dispatchers.IO) {
-        transaction {
-            UserTable.update({ UserTable.id eq id.value }) { stmt ->
-                fields.username?.let { stmt[UserTable.username] = it }
-                fields.name?.let { stmt[UserTable.name] = it }
-                fields.bio?.let { stmt[UserTable.bio] = it }
-                fields.avatarId?.let { stmt[UserTable.avatarId] = it }
+    override suspend fun update(id: UserId, fields: UpdateUserFields): Either<UpdateUserError, User> =
+        withContext(Dispatchers.IO) {
+            // update + select instead of updateReturning: H2 (used in tests) doesn't support RETURNING clause
+            try {
+                transaction {
+                    val updated = UserTable.update({ UserTable.id eq id.value }) { stmt ->
+                        fields.username?.let { stmt[UserTable.username] = it.value }
+                        fields.name?.let { stmt[UserTable.name] = it }
+                        fields.bio?.let { stmt[UserTable.bio] = it }
+                        fields.avatarId?.let { stmt[UserTable.avatarId] = it }
+                    }
+                    if (updated == 0) return@transaction Either.Left(UpdateUserError.NotFound)
+                    Either.Right(UserTable.selectAll()
+                        .where { UserTable.id eq id.value }
+                        .single().toUser())
+                }
+            } catch (e: ExposedSQLException) {
+                // 23505 is the PostgreSQL SQLState code for unique_violation
+                if (e.sqlState == "23505") Either.Left(UpdateUserError.UsernameConflict)
+                else throw e
             }
         }
-    }
 
-    override suspend fun existsByUsername(username: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun existsByUsername(username: Username): Boolean = withContext(Dispatchers.IO) {
         transaction {
             UserTable.selectAll()
-                .where { UserTable.username eq username }
+                .where { UserTable.username eq username.value }
                 .count() > 0
         }
     }
 
-    override suspend fun existsByEmail(email: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun existsByEmail(email: Email): Boolean = withContext(Dispatchers.IO) {
         transaction {
             UserTable.selectAll()
-                .where { UserTable.email eq email }
+                .where { UserTable.email eq email.value }
                 .count() > 0
         }
     }
 }
 
-data class CreateUserInput(
-    val id: UserId,
-    val firebaseId: FirebaseId,
-    val email: String,
-    val username: String,
-    val name: String? = null,
-    val avatarId: String? = null,
-    val bio: String? = null,
-)
-
 data class UpdateUserFields(
-    val username: String? = null,
+    val username: Username? = null,
     val name: String? = null,
     val bio: String? = null,
     val avatarId: String? = null,
