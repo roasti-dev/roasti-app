@@ -1,4 +1,4 @@
-package dev.roasti.features.auth
+package dev.roasti.features.auth.usecase
 
 import arrow.core.Either
 import arrow.core.NonEmptyList
@@ -13,7 +13,7 @@ import dev.roasti.common.ValidationResult
 import dev.roasti.common.api.FieldError
 import dev.roasti.feature.auth.data.network.model.request.RegisterRequestDto
 import dev.roasti.feature.auth.data.network.model.response.AuthResponseDto
-import dev.roasti.feature.auth.data.network.model.response.RefreshResponseDto
+import dev.roasti.features.auth.FirebaseSigner
 import dev.roasti.features.users.UserRepository
 import dev.roasti.features.users.model.Email
 import dev.roasti.features.users.model.FirebaseId
@@ -36,37 +36,13 @@ sealed interface RegisterError {
   data class InvalidInput(val errors: NonEmptyList<FieldError>) : RegisterError
 }
 
-sealed interface LoginError {
-  data object InvalidCredentials : LoginError
-
-  data object UserDisabled : LoginError
-}
-
-sealed interface RefreshError {
-  data object InvalidRefreshToken : RefreshError
-}
-
-interface AuthService {
-  suspend fun register(request: RegisterRequestDto): Either<RegisterError, AuthResponseDto>
-
-  suspend fun login(username: String, password: String): Either<LoginError, AuthResponseDto>
-
-  suspend fun refresh(refreshToken: String): Either<RefreshError, RefreshResponseDto>
-
-  suspend fun logout(refreshToken: String)
-}
-
-class AuthServiceImpl(
+class Register(
     private val userRepo: UserRepository,
     private val signer: FirebaseSigner,
-    private val revokedTokens: RevokedTokenRepository,
     private val firebaseAuth: FirebaseAuth,
-) : AuthService {
-
+) {
   @OptIn(ExperimentalUuidApi::class)
-  override suspend fun register(
-      request: RegisterRequestDto
-  ): Either<RegisterError, AuthResponseDto> {
+  suspend operator fun invoke(request: RegisterRequestDto): Either<RegisterError, AuthResponseDto> {
     val validation =
         Either.zipOrAccumulate(
                 { e1, e2 -> e1 + e2 },
@@ -130,42 +106,6 @@ class AuthServiceImpl(
     }
   }
 
-  override suspend fun login(
-      username: String,
-      password: String,
-  ): Either<LoginError, AuthResponseDto> = either {
-    val username = Username.create(username).mapLeft { LoginError.InvalidCredentials }.bind()
-
-    val user = userRepo.findByUsername(username) ?: raise(LoginError.InvalidCredentials)
-    val tokens =
-        try {
-          signer.signInWithPassword(user.email.value, password)
-        } catch (e: AuthException) {
-          raise(e.toLoginError())
-        }
-    AuthResponseDto(
-        accessToken = tokens.idToken,
-        refreshToken = tokens.refreshToken,
-        user = user.toDto(),
-    )
-  }
-
-  override suspend fun refresh(refreshToken: String): Either<RefreshError, RefreshResponseDto> =
-      either {
-        ensure(!revokedTokens.isRevoked(refreshToken)) { RefreshError.InvalidRefreshToken }
-        val tokens =
-            try {
-              signer.refreshToken(refreshToken)
-            } catch (e: AuthException) {
-              raise(e.toRefreshError())
-            }
-        RefreshResponseDto(accessToken = tokens.idToken, refreshToken = tokens.refreshToken)
-      }
-
-  override suspend fun logout(refreshToken: String) {
-    revokedTokens.add(refreshToken)
-  }
-
   private fun validatePassword(password: String): ValidationResult<Unit> =
       either {
             zipOrAccumulate(
@@ -175,22 +115,4 @@ class AuthServiceImpl(
             }
           }
           .mapLeft { it.map { msg -> FieldError("password", msg) } }
-
-  private fun AuthException.toLoginError(): LoginError =
-      when (this) {
-        is AuthException.InvalidCredentials,
-        is AuthException.UserNotFound -> LoginError.InvalidCredentials
-
-        is AuthException.UserDisabled -> LoginError.UserDisabled
-
-        else -> LoginError.InvalidCredentials
-      }
-
-  private fun AuthException.toRefreshError(): RefreshError =
-      when (this) {
-        is AuthException.InvalidRefreshToken,
-        is AuthException.TokenRevoked -> RefreshError.InvalidRefreshToken
-
-        else -> RefreshError.InvalidRefreshToken
-      }
 }

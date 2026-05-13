@@ -5,14 +5,16 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
-import dev.roasti.features.auth.AuthService
-import dev.roasti.features.auth.AuthServiceImpl
 import dev.roasti.features.auth.FirebaseSigner
 import dev.roasti.features.auth.FirebaseSignerImpl
 import dev.roasti.features.auth.RevokedTokenRepository
 import dev.roasti.features.auth.RevokedTokenRepositoryImpl
 import dev.roasti.features.auth.RevokedTokenTable
 import dev.roasti.features.auth.authRoutes
+import dev.roasti.features.auth.usecase.Login
+import dev.roasti.features.auth.usecase.Logout
+import dev.roasti.features.auth.usecase.RefreshToken
+import dev.roasti.features.auth.usecase.Register
 import dev.roasti.features.comments.CommentRepository
 import dev.roasti.features.comments.CommentRepositoryImpl
 import dev.roasti.features.comments.CommentService
@@ -150,7 +152,10 @@ fun Application.module() {
           single<FileStorage> { LocalFileStorage(uploadsDir) }
           single<UploadRepository> { UploadRepositoryImpl() }
           single<UploadService> { UploadServiceImpl(get(), get()) }
-          single<AuthService> { AuthServiceImpl(get(), get(), get(), get()) }
+          single { Register(get(), get(), get()) }
+          single { Login(get(), get()) }
+          single { RefreshToken(get(), get()) }
+          single { Logout(get()) }
         }
     )
   }
