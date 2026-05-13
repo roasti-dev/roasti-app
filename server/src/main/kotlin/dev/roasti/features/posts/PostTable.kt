@@ -1,26 +1,26 @@
 package dev.roasti.features.posts
 
-import org.jetbrains.exposed.v1.core.ReferenceOption
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.dao.id.UuidTable
-import org.jetbrains.exposed.v1.datetime.timestamp
 import dev.roasti.features.recipes.RecipeTable
 import dev.roasti.features.users.UserTable
 import dev.roasti.features.users.model.UserPreview
 import dev.roasti.features.users.toUserPreview
 import dev.roasti.features.votes.VoteInfo
 import kotlin.uuid.ExperimentalUuidApi
+import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.dao.id.UuidTable
+import org.jetbrains.exposed.v1.datetime.timestamp
 
 object PostTable : UuidTable("posts") {
-    @OptIn(ExperimentalUuidApi::class)
-    val authorId = reference("author_id", UserTable, onDelete = ReferenceOption.CASCADE)
-    val title = varchar("title", 500).nullable()
-    val text = text("text").nullable()
-    val images = array<String>("images")
-    @OptIn(ExperimentalUuidApi::class)
-    val recipeId = reference("recipe_id", RecipeTable, onDelete = ReferenceOption.SET_NULL).nullable()
-    val createdAt = timestamp("created_at")
-    val updatedAt = timestamp("updated_at")
+  @OptIn(ExperimentalUuidApi::class)
+  val authorId = reference("author_id", UserTable, onDelete = ReferenceOption.CASCADE)
+  val title = varchar("title", 500).nullable()
+  val text = text("text").nullable()
+  val images = array<String>("images")
+  @OptIn(ExperimentalUuidApi::class)
+  val recipeId = reference("recipe_id", RecipeTable, onDelete = ReferenceOption.SET_NULL).nullable()
+  val createdAt = timestamp("created_at")
+  val updatedAt = timestamp("updated_at")
 }
 
 @OptIn(ExperimentalUuidApi::class)
@@ -36,28 +36,30 @@ data class PostRow(
 )
 
 @OptIn(ExperimentalUuidApi::class)
-internal fun ResultRow.toPostRow() = PostRow(
-    id = PostId(this[PostTable.id].value),
-    author = toUserPreview(),
-    title = this[PostTable.title],
-    text = this[PostTable.text],
-    images = this[PostTable.images],
-    recipeId = this[PostTable.recipeId]?.value,
-    createdAt = this[PostTable.createdAt],
-    updatedAt = this[PostTable.updatedAt],
-)
+internal fun ResultRow.toPostRow() =
+    PostRow(
+        id = PostId(this[PostTable.id].value),
+        author = toUserPreview(),
+        title = this[PostTable.title],
+        text = this[PostTable.text],
+        images = this[PostTable.images],
+        recipeId = this[PostTable.recipeId]?.value,
+        createdAt = this[PostTable.createdAt],
+        updatedAt = this[PostTable.updatedAt],
+    )
 
 @OptIn(ExperimentalUuidApi::class)
-internal fun PostRow.toPost(voteInfo: VoteInfo, commentsCount: Int) = Post(
-    id = id,
-    author = author,
-    title = title,
-    text = text,
-    images = images,
-    recipeId = recipeId,
-    rating = voteInfo.rating,
-    userVote = voteInfo.userVote,
-    commentsCount = commentsCount,
-    createdAt = createdAt,
-    updatedAt = updatedAt,
-)
+internal fun PostRow.toPost(voteInfo: VoteInfo, commentsCount: Int) =
+    Post(
+        id = id,
+        author = author,
+        title = title,
+        text = text,
+        images = images,
+        recipeId = recipeId,
+        rating = voteInfo.rating,
+        userVote = voteInfo.userVote,
+        commentsCount = commentsCount,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+    )

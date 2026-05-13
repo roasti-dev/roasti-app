@@ -6,5 +6,3 @@ data class UserPreview(
     val name: String?,
     val avatarId: String?,
 )
-
-

@@ -34,6 +34,7 @@ firebase-admin = "9.4.3"
 koin = "4.2.1"
 kotlin = "2.3.21"
 ktor = "3.4.3"
+spotless = "8.4.0"
 
 [libraries]
 # Android libraries
@@ -112,3 +113,4 @@ ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
 
 # Common plugins
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

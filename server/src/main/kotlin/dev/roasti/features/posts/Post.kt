@@ -6,9 +6,7 @@ import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-@OptIn(ExperimentalUuidApi::class)
-@JvmInline
-value class PostId(val value: Uuid)
+@OptIn(ExperimentalUuidApi::class) @JvmInline value class PostId(val value: Uuid)
 
 @OptIn(ExperimentalUuidApi::class)
 data class Post(
@@ -25,4 +23,3 @@ data class Post(
     val createdAt: Instant,
     val updatedAt: Instant,
 )
-

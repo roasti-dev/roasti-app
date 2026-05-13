@@ -8,14 +8,9 @@ import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-@JvmInline
-@OptIn(ExperimentalUuidApi::class)
-value class RecipeId(val value: Uuid)
+@JvmInline @OptIn(ExperimentalUuidApi::class) value class RecipeId(val value: Uuid)
 
-data class RecipeOriginInfo(
-    val author: UserPreview,
-    val recipeId: RecipeId,
-)
+data class RecipeOriginInfo(val author: UserPreview, val recipeId: RecipeId)
 
 @OptIn(ExperimentalUuidApi::class)
 data class Recipe(
@@ -37,4 +32,3 @@ data class Recipe(
     val createdAt: Instant,
     val updatedAt: Instant,
 )
-

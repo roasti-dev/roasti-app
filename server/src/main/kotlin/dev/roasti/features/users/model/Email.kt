@@ -8,14 +8,14 @@ data class EmailError(val message: String)
 
 @JvmInline
 value class Email private constructor(val value: String) {
-    companion object {
-        private val emailRegex = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
+  companion object {
+    private val emailRegex = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
 
-        fun create(email: String): Either<EmailError, Email> = either {
-            ensure(emailRegex.matches(email)) { EmailError("invalid email format") }
-            Email(email)
-        }
-
-        fun fromDb(trustedRaw: String): Email = Email(trustedRaw)
+    fun create(email: String): Either<EmailError, Email> = either {
+      ensure(emailRegex.matches(email)) { EmailError("invalid email format") }
+      Email(email)
     }
+
+    fun fromDb(trustedRaw: String): Email = Email(trustedRaw)
+  }
 }
