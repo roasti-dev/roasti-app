@@ -1,0 +1,60 @@
+CREATE TABLE Recipe (
+    id TEXT PRIMARY KEY NOT NULL,
+    title TEXT NOT NULL
+   ,
+   description TEXT NOT NULL,
+   note TEXT,
+   image_id TEXT,
+   brew_method TEXT AS dev.roasti.feature.recipe.domain.model.BrewMethod NOT NULL,
+   difficulty TEXT AS dev.roasti.feature.recipe.domain.model.Difficulty NOT NULL,
+   roast_level TEXT AS dev.roasti.feature.recipe.domain.model.RoastLevel NOT NULL,
+   beans TEXT,
+   is_liked INTEGER NOT NULL DEFAULT 0,
+   likes_count INTEGER NOT NULL DEFAULT 0,
+   author_id TEXT,
+   author_name TEXT,
+   author_image_id TEXT,
+   origin_recipe_id TEXT,
+   origin_author_id TEXT,
+   origin_author_name TEXT,
+   origin_author_image_id TEXT,
+   is_public INTEGER NOT NULL DEFAULT 1,
+   created_at TEXT,
+   updated_at TEXT
+);
+
+-- Insert or update a recipe (used by RemoteMediator when saving network data)
+insertRecipe:
+INSERT OR REPLACE INTO Recipe(
+    id, title, description, note, image_id, brew_method, difficulty,
+    roast_level, beans, is_liked, likes_count, author_id, author_name,
+    author_image_id, origin_recipe_id, origin_author_id, origin_author_name,
+    origin_author_image_id, is_public, created_at, updated_at
+) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Get all recipes, newest first, with pagination
+  -- LIMIT = how many items per page
+  -- OFFSET = how many items to skip (page * pageSize)
+getAllRecipes:
+SELECT * FROM Recipe
+ORDER BY created_at DESC
+LIMIT ? OFFSET ?;
+
+-- Count total recipes (needed by QueryPagingSource)
+countAllRecipes:
+SELECT COUNT(*) FROM Recipe;
+
+toggleLike:
+UPDATE Recipe
+SET is_liked = CASE WHEN is_liked = 1 THEN 0 ELSE 1 END,
+    likes_count = CASE WHEN is_liked = 1 THEN likes_count - 1 ELSE likes_count + 1 END
+    WHERE id = ?;
+
+clearAllRecipes:
+DELETE FROM Recipe;
+
+deleteRecipe:
+DELETE FROM Recipe WHERE id = ?;
+
+getRecipeById:
+SELECT * FROM Recipe WHERE id = ?;

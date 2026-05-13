@@ -13,7 +13,7 @@ Target approach:
 ## Target Structure
 
 ```text
-shared/src/commonMain/kotlin/org/nikol/roasti/
+shared/src/commonMain/kotlin/dev/roasti/
   core/
     database/
     di/

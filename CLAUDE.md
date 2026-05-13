@@ -64,7 +64,7 @@ KMP-приложение для энтузиастов кофе: трекинг 
 | Типографика | `MaterialTheme.typography.*`                                |                                                                                                                                                        
 
 Значения для theme, colors, shapes, spacing, type - брать отсюда
-`composeApp/src/androidMain/kotlin/org/nikol/roasti/ui/theme/`
+`composeApp/src/androidMain/kotlin/dev/roasti/ui/theme/`
 Бренд: Orange600 `#EA580C`, нейтралы: Stone-палитра (тёплые кофейные
 тона).                                                                                                                           
 Никогда не хардкодить `Color`, `sp` напрямую в Composable.
@@ -109,7 +109,7 @@ ViewModel-ы объявлять только в `composeApp/di/ViewModelsModule.
 Референс:
 `shared/src/androidMain/.../feature/post/data/paging/AllPostsRemoteMediator.kt`                                                                                                             
 Koin-модуль: `shared/src/androidMain/.../core/di/PostPagingModule.kt`
-SQLDelight `.sq` файлы: `shared/src/commonMain/sqldelight/org/nikol/roasti/`
+SQLDelight `.sq` файлы: `shared/src/commonMain/sqldelight/dev/roasti/`
 
 ## Запрещено
 
@@ -127,11 +127,11 @@ SQLDelight `.sq` файлы: `shared/src/commonMain/sqldelight/org/nikol/roasti/
 Все авторизированные запросы(в данный момент это все запросы) должны проходить через
 `AuthorizedRequestExecutor`
 Пример - `LikesApiClient` в
-`shared/src/commonMain/kotlin/org/nikol/roasti/feature/likes/data/LikesApiClient.kt`
+`shared/src/commonMain/kotlin/dev/roasti/feature/likes/data/LikesApiClient.kt`
 Некоторые новые фичи требуют использования паралелльного ApiClient для моков. Смена реализаций rest
 api и mock должна происходить в DI
-Примеры: `shared/src/commonMain/kotlin/org/nikol/roasti/feature/post/di/PostModule.kt`,
-`shared/src/commonMain/kotlin/org/nikol/roasti/feature/post/data/network/MockPostsApiClient.kt`
+Примеры: `shared/src/commonMain/kotlin/dev/roasti/feature/post/di/PostModule.kt`,
+`shared/src/commonMain/kotlin/dev/roasti/feature/post/data/network/MockPostsApiClient.kt`
 ApiClient возвращает Result<Dto>. RepositoryImpl маппит в Result<Domain>, ViewModel обрабатывает.
 Data слой должен содержать два DataSource - remote и local(БД), они должны реализовывать 1 и тот же
 интерфейс. Репозиторий будет заниматься их управлением
@@ -388,12 +388,12 @@ Profile).
 используй - fun `imageUrl` в `ImageUrlBuilder.kt`, построение должно быть на уровне viewModel или ui
 маппера.
 Пример в
-`composeApp/src/androidMain/kotlin/org/nikol/roasti/ui/features/feed/mapper/PostUiMapper.kt`
+`composeApp/src/androidMain/kotlin/dev/roasti/ui/features/feed/mapper/PostUiMapper.kt`
 
 ## UI(Compose)
 
 Общие UI компоненты находятся в ui kit -
-`composeApp/src/androidMain/kotlin/org/nikol/roasti/ui/uikit`
+`composeApp/src/androidMain/kotlin/dev/roasti/ui/uikit`
 При построении нового ui предпочтительно переиспользовать существующие и добавлять новые компоненты.
 Новый компонент должен быть переиспользуемым, гибким, удобным для использования разными фичами, а
 поэтому универсален

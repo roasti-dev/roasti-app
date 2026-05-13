@@ -9,7 +9,7 @@ plugins {
 
 kotlin {
     android {
-        namespace = "org.nikol.roasti.shared"
+        namespace = "dev.roasti.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
         
@@ -62,7 +62,7 @@ kotlin {
 sqldelight {
     databases {
         register("RoastiDatabaseCache") {
-            packageName = "org.nikol.roasti"
+            packageName = "dev.roasti"
         }
     }
 }

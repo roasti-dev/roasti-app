@@ -6,7 +6,7 @@ plugins {
 }
 
 application {
-    mainClass.set("org.nikol.roasti.ApplicationKt")
+    mainClass.set("dev.roasti.ApplicationKt")
 
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")

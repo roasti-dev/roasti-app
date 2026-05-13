@@ -30,7 +30,7 @@ kotlin {
 }
 
 android {
-    namespace = "org.nikol.roasti"
+    namespace = "dev.roasti"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     sourceSets["main"].apply {
@@ -52,7 +52,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "org.nikol.roasti"
+        applicationId = "dev.roasti"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
