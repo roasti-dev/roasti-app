@@ -57,7 +57,7 @@ interface RecipeRepository {
         roastLevel: RoastLevel?,
     ): Pair<List<RecipeRow>, Int>
     suspend fun create(authorId: UserId, input: CreateRecipeInput): RecipeRow
-    suspend fun update(id: RecipeId, input: CreateRecipeInput): RecipeRow?
+    suspend fun update(id: RecipeId, input: CreateRecipeInput): Unit
     suspend fun delete(id: RecipeId)
     suspend fun getSteps(recipeId: RecipeId): List<BrewStep>
     suspend fun getStepsBatch(recipeIds: List<RecipeId>): Map<RecipeId, List<BrewStep>>
@@ -136,7 +136,7 @@ class RecipeRepositoryImpl : RecipeRepository {
         findById(RecipeId(id))!!
     }
 
-    override suspend fun update(id: RecipeId, input: CreateRecipeInput): RecipeRow? = withContext(Dispatchers.IO) {
+    override suspend fun update(id: RecipeId, input: CreateRecipeInput) = withContext(Dispatchers.IO) {
         val now = Clock.System.now()
         transaction {
             RecipeTable.update({ RecipeTable.id eq id.value }) {
@@ -154,7 +154,6 @@ class RecipeRepositoryImpl : RecipeRepository {
             BrewStepTable.deleteWhere { BrewStepTable.recipeId eq id.value }
             insertSteps(id, input.steps)
         }
-        findById(id)
     }
 
     override suspend fun delete(id: RecipeId): Unit = withContext(Dispatchers.IO) {

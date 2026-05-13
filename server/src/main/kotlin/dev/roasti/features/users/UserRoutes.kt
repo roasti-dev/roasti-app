@@ -16,6 +16,8 @@ import dev.roasti.feature.auth.data.network.model.request.UpdateProfileRequest
 import dev.roasti.feature.auth.data.network.model.response.UserDto
 import dev.roasti.FIREBASE_AUTH
 import dev.roasti.FirebasePrincipal
+import dev.roasti.common.api.ApiError
+import dev.roasti.common.api.ApiErrorCode
 import dev.roasti.common.api.respondError
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -32,7 +34,7 @@ fun Route.userRoutes() {
             get("/me") {
                 val userId = call.principal<FirebasePrincipal>()!!.id
                 userService.getById(userId).fold(
-                    ifLeft = { call.respondError(it.toHttpStatus(), it.toError()) },
+                    ifLeft = { call.respondError(it, GetUserError::toHttp) },
                     ifRight = { call.respond(it.toDto()) },
                 )
             }
@@ -48,7 +50,7 @@ fun Route.userRoutes() {
                     avatarId = body.imageId,
                 )
                 userService.updateProfile(userId, fields).fold(
-                    ifLeft = { call.respondError(it.toHttpStatus(), it.toError()) },
+                    ifLeft = { call.respondError(it, UpdateProfileError::toHttp) },
                     ifRight = { call.respond(it.toDto()) },
                 )
             }
@@ -56,7 +58,10 @@ fun Route.userRoutes() {
 
         get("/username-availability") {
             val username = call.request.queryParameters["username"]
-                ?: return@get call.respond(HttpStatusCode.BadRequest, "username query param required")
+                ?: return@get call.respond(
+                    HttpStatusCode.BadRequest,
+                    "username query param required"
+                )
             call.respond(UsernameAvailabilityResponse(userService.checkUsernameAvailability(username)))
         }
 
@@ -64,7 +69,7 @@ fun Route.userRoutes() {
             val username = call.parameters["username"]!!
             // TODO: public profile should not expose email — use a separate DTO without email field
             userService.getByUsername(username).fold(
-                ifLeft = { call.respondError(it.toHttpStatus(), it.toError()) },
+                ifLeft = { call.respondError(it, GetUserError::toHttp) },
                 ifRight = { call.respond(it.toDto()) },
             )
         }
@@ -80,3 +85,25 @@ fun User.toDto() = UserDto(
     avatarId = avatarId,
     bio = bio,
 )
+
+private fun GetUserError.toHttp() = when (this) {
+    GetUserError.NotFound -> HttpStatusCode.NotFound to ApiError(
+        ApiErrorCode.USER_NOT_FOUND,
+        "user not found"
+    )
+}
+
+private fun UpdateProfileError.toHttp() = when (this) {
+    is UpdateProfileError.InvalidUsername -> HttpStatusCode.UnprocessableEntity to ApiError(
+        ApiErrorCode.INVALID_INPUT, error.message
+    )
+
+    UpdateProfileError.NotFound -> HttpStatusCode.NotFound to ApiError(
+        ApiErrorCode.USER_NOT_FOUND,
+        "user not found"
+    )
+    UpdateProfileError.UsernameTaken -> HttpStatusCode.Conflict to ApiError(
+        ApiErrorCode.USERNAME_TAKEN,
+        "name is unavailable"
+    )
+}

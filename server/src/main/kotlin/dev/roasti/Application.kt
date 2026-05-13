@@ -120,7 +120,7 @@ fun Application.module() {
             single<CommentRepository> { CommentRepositoryImpl() }
             single<CommentService> { CommentServiceImpl(get()) }
             single<PostRepository> { PostRepositoryImpl() }
-            single<PostService> { PostServiceImpl(get(), get(), get()) }
+            single<PostService> { PostServiceImpl(get(), get(), get(), get(), get()) }
             single<LikeRepository> { LikeRepositoryImpl() }
             single<LikeService> { LikeServiceImpl(get()) }
             single<VoteRepository> { VoteRepositoryImpl() }

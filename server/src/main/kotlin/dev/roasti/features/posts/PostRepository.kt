@@ -10,6 +10,7 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
+import dev.roasti.features.recipes.RecipeId
 import dev.roasti.features.users.UserTable
 import dev.roasti.features.users.UserId
 import kotlin.time.Clock
@@ -17,26 +18,18 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
-data class CreatePostInput(
+data class PostInput(
     val title: String?,
     val text: String?,
     val images: List<String>,
-    val recipeId: Uuid?,
-)
-
-@OptIn(ExperimentalUuidApi::class)
-data class UpdatePostInput(
-    val title: String?,
-    val text: String?,
-    val images: List<String>,
-    val recipeId: Uuid?,
+    val recipeId:  RecipeId?,
 )
 
 interface PostRepository {
     suspend fun findById(id: PostId): PostRow?
     suspend fun list(page: Int, limit: Int, authorId: UserId?): Pair<List<PostRow>, Int>
-    suspend fun create(authorId: UserId, input: CreatePostInput): PostRow
-    suspend fun update(id: PostId, input: UpdatePostInput): PostRow?
+    suspend fun create(authorId: UserId, input: PostInput): PostRow
+    suspend fun update(id: PostId, input: PostInput): PostRow?
     suspend fun delete(id: PostId)
 }
 
@@ -74,7 +67,7 @@ class PostRepositoryImpl : PostRepository {
             }
         }
 
-    override suspend fun create(authorId: UserId, input: CreatePostInput): PostRow = withContext(Dispatchers.IO) {
+    override suspend fun create(authorId: UserId, input: PostInput): PostRow = withContext(Dispatchers.IO) {
         val id = Uuid.random()
         val now = Clock.System.now()
         transaction {
@@ -84,7 +77,7 @@ class PostRepositoryImpl : PostRepository {
                 it[PostTable.title] = input.title
                 it[PostTable.text] = input.text
                 it[PostTable.images] = input.images
-                it[PostTable.recipeId] = input.recipeId
+                it[PostTable.recipeId] = input.recipeId?.value
                 it[PostTable.createdAt] = now
                 it[PostTable.updatedAt] = now
             }
@@ -92,13 +85,13 @@ class PostRepositoryImpl : PostRepository {
         findById(PostId(id))!!
     }
 
-    override suspend fun update(id: PostId, input: UpdatePostInput): PostRow? = withContext(Dispatchers.IO) {
+    override suspend fun update(id: PostId, input: PostInput): PostRow? = withContext(Dispatchers.IO) {
         transaction {
             PostTable.update({ PostTable.id eq id.value }) {
                 it[title] = input.title
                 it[text] = input.text
                 it[images] = input.images
-                it[recipeId] = input.recipeId
+                it[recipeId] = input.recipeId?.value
                 it[updatedAt] = Clock.System.now()
             }
         }

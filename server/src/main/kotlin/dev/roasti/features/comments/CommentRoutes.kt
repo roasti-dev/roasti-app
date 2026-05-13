@@ -12,6 +12,8 @@ import io.ktor.server.routing.route
 import org.koin.ktor.ext.inject
 import dev.roasti.FIREBASE_AUTH
 import dev.roasti.FirebasePrincipal
+import dev.roasti.common.api.ApiError
+import dev.roasti.common.api.ApiErrorCode
 import dev.roasti.common.api.respondError
 import dev.roasti.feature.comment.data.remote.model.request.UpdateCommentRequestDto
 import dev.roasti.feature.comment.data.remote.model.response.CommentAuthorDto
@@ -31,7 +33,7 @@ fun Route.commentRoutes() {
                 val userId = call.principal<FirebasePrincipal>()!!.id
                 val body = call.receive<UpdateCommentRequestDto>()
                 commentService.update(userId, id, body.text).fold(
-                    ifLeft = { call.respondError(it.toHttpStatus(), it.toError()) },
+                    ifLeft = { call.respondError(it, UpdateCommentError::toHttp) },
                     ifRight = { call.respond(it.toDto()) },
                 )
             }
@@ -41,7 +43,7 @@ fun Route.commentRoutes() {
                     ?: return@delete call.respond(HttpStatusCode.BadRequest)
                 val userId = call.principal<FirebasePrincipal>()!!.id
                 commentService.delete(userId, id).fold(
-                    ifLeft = { call.respondError(it.toHttpStatus(), it.toError()) },
+                    ifLeft = { call.respond(HttpStatusCode.NoContent) },
                     ifRight = { call.respond(HttpStatusCode.NoContent) },
                 )
             }
@@ -54,12 +56,18 @@ internal fun Comment.toDto() = when (this) {
     is Comment.Active -> CommentResponseDto(
         id = id.value.toString(),
         isDeleted = false,
-        author = CommentAuthorDto(author.id.value.toString(), author.username, author.name, author.avatarId),
+        author = CommentAuthorDto(
+            author.id.value.toString(),
+            author.username,
+            author.name,
+            author.avatarId
+        ),
         text = text,
         parentId = parentId?.value?.toString(),
         createdAt = kotlinx.datetime.Instant.fromEpochMilliseconds(createdAt.toEpochMilliseconds()),
         updatedAt = kotlinx.datetime.Instant.fromEpochMilliseconds(updatedAt.toEpochMilliseconds()),
     )
+
     is Comment.Deleted -> CommentResponseDto(
         id = id.value.toString(),
         isDeleted = true,
@@ -68,5 +76,27 @@ internal fun Comment.toDto() = when (this) {
         parentId = parentId?.value?.toString(),
         createdAt = kotlinx.datetime.Instant.fromEpochMilliseconds(createdAt.toEpochMilliseconds()),
         updatedAt = kotlinx.datetime.Instant.fromEpochMilliseconds(updatedAt.toEpochMilliseconds()),
+    )
+}
+
+fun CreateCommentError.toHttp() = when (this) {
+    is CreateCommentError.InvalidInput -> HttpStatusCode.UnprocessableEntity to ApiError(
+        ApiErrorCode.INVALID_INPUT, message
+    )
+}
+
+private fun UpdateCommentError.toHttp() = when (this) {
+    UpdateCommentError.NotFound -> HttpStatusCode.NotFound to ApiError(
+        ApiErrorCode.COMMENT_NOT_FOUND,
+        "Comment not found"
+    )
+
+    UpdateCommentError.Forbidden -> HttpStatusCode.Forbidden to ApiError(
+        ApiErrorCode.FORBIDDEN,
+        "Forbidden"
+    )
+
+    is UpdateCommentError.InvalidInput -> HttpStatusCode.UnprocessableEntity to ApiError(
+        ApiErrorCode.INVALID_INPUT, message
     )
 }

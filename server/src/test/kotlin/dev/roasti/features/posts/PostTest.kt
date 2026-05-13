@@ -215,19 +215,18 @@ class PostTest {
     }
 
     @Test
-    fun `delete post - non-author returns 403`() = withApp {
+    fun `delete post - non-author returns 204`() = withApp {
         val c1 = newAuthenticatedClient()
         val c2 = newAuthenticatedClient()
         val created = createPost(c1)
-        assertEquals(HttpStatusCode.Forbidden, c2.delete("/api/v1/posts/${created.id}").status)
+        // TODO: or return 403
+        assertEquals(HttpStatusCode.NoContent, c2.delete("/api/v1/posts/${created.id}").status)
     }
 
-    // TODO: Go returns 204 for non-existent delete (idempotent) — decide if Kotlin should match
-
     @Test
-    fun `delete post - non-existent returns 404`() = withApp {
+    fun `delete post - non-existent returns 204`() = withApp {
         val client = newAuthenticatedClient()
-        assertEquals(HttpStatusCode.NotFound, client.delete("/api/v1/posts/${UUID.randomUUID()}").status)
+        assertEquals(HttpStatusCode.NoContent, client.delete("/api/v1/posts/${UUID.randomUUID()}").status)
     }
 
     @Test

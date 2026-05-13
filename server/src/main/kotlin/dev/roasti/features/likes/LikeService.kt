@@ -3,24 +3,23 @@ package dev.roasti.features.likes
 import dev.roasti.features.users.UserId
 import kotlin.uuid.Uuid
 
-data class ToggleResult(val isLiked: Boolean, val count: Int)
 
 interface LikeService {
-    suspend fun toggle(userId: UserId, targetId: Uuid, targetType: LikeTargetType): ToggleResult
+    suspend fun toggle(userId: UserId, targetId: Uuid, targetType: LikeTargetType): LikeInfo
     suspend fun getInfo(userId: UserId?, targetId: Uuid, targetType: LikeTargetType): LikeInfo
     suspend fun getInfoBatch(userId: UserId?, targetIds: List<Uuid>, targetType: LikeTargetType): Map<Uuid, LikeInfo>
 }
 
 class LikeServiceImpl(private val repo: LikeRepository) : LikeService {
 
-    override suspend fun toggle(userId: UserId, targetId: Uuid, targetType: LikeTargetType): ToggleResult {
+    override suspend fun toggle(userId: UserId, targetId: Uuid, targetType: LikeTargetType): LikeInfo {
         val exists = repo.exists(userId, targetId, targetType)
         if (exists) {
             repo.delete(userId, targetId, targetType)
         } else {
             repo.create(userId, targetId, targetType)
         }
-        return getInfo(userId, targetId, targetType).toToggleResult()
+        return getInfo(userId, targetId, targetType)
     }
 
     override suspend fun getInfo(userId: UserId?, targetId: Uuid, targetType: LikeTargetType): LikeInfo =
@@ -37,9 +36,4 @@ class LikeServiceImpl(private val repo: LikeRepository) : LikeService {
             )
         }
     }
-
-    private fun LikeInfo.toToggleResult() = ToggleResult(
-        isLiked = isLiked,
-        count = count
-    )
 }

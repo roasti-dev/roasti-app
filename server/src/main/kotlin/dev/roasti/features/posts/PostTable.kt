@@ -4,10 +4,11 @@ import org.jetbrains.exposed.v1.core.ReferenceOption
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.dao.id.UuidTable
 import org.jetbrains.exposed.v1.datetime.timestamp
+import dev.roasti.features.recipes.RecipeTable
 import dev.roasti.features.users.UserTable
-import dev.roasti.features.users.UserId
 import dev.roasti.features.users.UserPreview
 import dev.roasti.features.users.toUserPreview
+import dev.roasti.features.votes.VoteInfo
 import kotlin.uuid.ExperimentalUuidApi
 
 object PostTable : UuidTable("posts") {
@@ -17,7 +18,7 @@ object PostTable : UuidTable("posts") {
     val text = text("text").nullable()
     val images = array<String>("images")
     @OptIn(ExperimentalUuidApi::class)
-    val recipeId = uuid("recipe_id").nullable()
+    val recipeId = reference("recipe_id", RecipeTable, onDelete = ReferenceOption.SET_NULL).nullable()
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
 }
@@ -41,7 +42,22 @@ internal fun ResultRow.toPostRow() = PostRow(
     title = this[PostTable.title],
     text = this[PostTable.text],
     images = this[PostTable.images],
-    recipeId = this[PostTable.recipeId],
+    recipeId = this[PostTable.recipeId]?.value,
     createdAt = this[PostTable.createdAt],
     updatedAt = this[PostTable.updatedAt],
+)
+
+@OptIn(ExperimentalUuidApi::class)
+internal fun PostRow.toPost(voteInfo: VoteInfo, commentsCount: Int) = Post(
+    id = id,
+    author = author,
+    title = title,
+    text = text,
+    images = images,
+    recipeId = recipeId,
+    rating = voteInfo.rating,
+    userVote = voteInfo.userVote,
+    commentsCount = commentsCount,
+    createdAt = createdAt,
+    updatedAt = updatedAt,
 )

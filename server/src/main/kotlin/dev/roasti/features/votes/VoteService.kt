@@ -6,22 +6,32 @@ import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
 interface VoteService {
-    suspend fun put(userId: UserId, targetId: Uuid, targetType: VoteTargetType, direction: VoteDirection): VoteInfo
-    suspend fun remove(userId: UserId, targetId: Uuid, targetType: VoteTargetType): VoteInfo
+    suspend fun toggle(userId: UserId, targetId: Uuid, targetType: VoteTargetType, direction: VoteDirection): VoteInfo
     suspend fun getInfo(userId: UserId?, targetId: Uuid, targetType: VoteTargetType): VoteInfo
     suspend fun getInfoBatch(userId: UserId?, targetIds: List<Uuid>, targetType: VoteTargetType): Map<Uuid, VoteInfo>
 }
 
 @OptIn(ExperimentalUuidApi::class)
 class VoteServiceImpl(private val repo: VoteRepository) : VoteService {
+    override suspend fun toggle(
+        userId: UserId,
+        targetId: Uuid,
+        targetType: VoteTargetType,
+        direction: VoteDirection
+    ): VoteInfo {
+        when (direction) {
+            VoteDirection.UP, VoteDirection.DOWN -> repo.upsert(
+                userId,
+                targetId,
+                targetType,
+                direction
+            )
 
-    override suspend fun put(userId: UserId, targetId: Uuid, targetType: VoteTargetType, direction: VoteDirection): VoteInfo {
-        repo.upsert(userId, targetId, targetType, direction)
-        return getInfo(userId, targetId, targetType)
-    }
+            VoteDirection.NONE -> {
+                repo.delete(userId, targetId, targetType)
 
-    override suspend fun remove(userId: UserId, targetId: Uuid, targetType: VoteTargetType): VoteInfo {
-        repo.delete(userId, targetId, targetType)
+            }
+        }
         return getInfo(userId, targetId, targetType)
     }
 
@@ -33,7 +43,7 @@ class VoteServiceImpl(private val repo: VoteRepository) : VoteService {
 
         // TODO: replace it with fetchRatings + fetchUserVotes
 
-        val rows = repo.getVotes(userId, targetIds, targetType)
+        val rows = repo.getLikes(userId, targetIds, targetType)
 
         val groupedByTarget = rows.groupBy { it.targetId }
         val groupedByUser = rows.groupBy { it.targetId }

@@ -17,6 +17,7 @@ data class Post(
     val title: String?,
     val text: String?,
     val images: List<String>,
+    // TODO: replace recipeId with recipeRef
     val recipeId: Uuid?,
     val rating: Int,
     val userVote: VoteDirection,

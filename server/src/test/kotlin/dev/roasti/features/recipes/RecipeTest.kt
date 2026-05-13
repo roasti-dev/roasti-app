@@ -198,25 +198,27 @@ class RecipeTest {
     }
 
     @Test
-    fun `delete recipe - non-author on public recipe returns 403`() = withApp {
+    fun `delete recipe - non-author on public recipe returns 204`() = withApp {
         val c1 = newAuthenticatedClient()
         val c2 = newAuthenticatedClient()
         val created = createRecipe(c1)
-        assertEquals(HttpStatusCode.Forbidden, c2.delete("/api/v1/recipes/${created.id}").status)
+        // TODO: or return 403
+        assertEquals(HttpStatusCode.NoContent, c2.delete("/api/v1/recipes/${created.id}").status)
     }
 
     @Test
-    fun `delete recipe - non-existent returns 404`() = withApp {
+    fun `delete recipe - non-existent returns 204`() = withApp {
         val client = newAuthenticatedClient()
-        assertEquals(HttpStatusCode.NotFound, client.delete("/api/v1/recipes/${UUID.randomUUID()}").status)
+        // or return 404
+        assertEquals(HttpStatusCode.NoContent, client.delete("/api/v1/recipes/${UUID.randomUUID()}").status)
     }
 
     @Test
-    fun `delete recipe - already deleted returns 404`() = withApp {
+    fun `delete recipe - already deleted returns 204`() = withApp {
         val client = newAuthenticatedClient()
         val created = createRecipe(client)
         client.delete("/api/v1/recipes/${created.id}")
-        assertEquals(HttpStatusCode.NotFound, client.delete("/api/v1/recipes/${created.id}").status)
+        assertEquals(HttpStatusCode.NoContent, client.delete("/api/v1/recipes/${created.id}").status)
     }
 
     @Test

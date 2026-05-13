@@ -14,12 +14,16 @@ import io.ktor.server.routing.route
 import org.koin.ktor.ext.inject
 import dev.roasti.FIREBASE_AUTH
 import dev.roasti.FirebasePrincipal
+import dev.roasti.common.api.ApiError
+import dev.roasti.common.api.ApiErrorCode
 import dev.roasti.common.api.respondError
+import dev.roasti.common.api.toDto
 import dev.roasti.feature.comment.data.remote.model.request.CreateCommentRequestDto
 import dev.roasti.feature.comment.data.remote.model.response.CommentThreadResponseDto
 import dev.roasti.core.network.PageResponseDto
 import dev.roasti.core.network.PaginationResponseDto
 import dev.roasti.common.domain.Page
+import dev.roasti.common.domain.toId
 import dev.roasti.feature.likes.data.RecipeLikeDto
 import dev.roasti.feature.recipe.data.remote.model.BrewMethodDto
 import dev.roasti.feature.recipe.data.remote.model.DifficultyDto
@@ -34,7 +38,9 @@ import dev.roasti.feature.recipe.domain.model.Difficulty
 import dev.roasti.feature.recipe.domain.model.RoastLevel
 import dev.roasti.features.comments.CommentId
 import dev.roasti.features.comments.CommentThread
+import dev.roasti.features.comments.toHttp
 import dev.roasti.features.comments.toDto
+import dev.roasti.features.likes.LikeInfo
 import dev.roasti.features.users.UserId
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -47,45 +53,49 @@ fun Route.recipeRoutes() {
         get {
             val page = call.request.queryParameters["page"]?.toIntOrNull() ?: 1
             val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 20
-            val authorId = call.request.queryParameters["author_id"]?.let { UserId(Uuid.parse(it)) }
-            val brewMethod = call.request.queryParameters["brew_method"]?.let { parseBrewMethodDto(it)?.toDomain() }
-            val difficulty = call.request.queryParameters["difficulty"]?.let { parseDifficultyDto(it)?.toDomain() }
-            val roastLevel = call.request.queryParameters["roast_level"]?.let { parseRoastLevelDto(it)?.toDomain() }
+            val authorId = call.queryParameters["author_id"]?.let {
+                it.toId(::UserId)
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+            }
+            val brewMethod =
+                call.request.queryParameters["brew_method"]?.let { parseBrewMethodDto(it)?.toDomain() }
+            val difficulty =
+                call.request.queryParameters["difficulty"]?.let { parseDifficultyDto(it)?.toDomain() }
+            val roastLevel =
+                call.request.queryParameters["roast_level"]?.let { parseRoastLevelDto(it)?.toDomain() }
             val userId = call.principal<FirebasePrincipal>()?.id
-            val recipesPage = recipeService.list(page, limit, authorId, userId, brewMethod, difficulty, roastLevel)
+            val recipesPage = recipeService.list(
+                page,
+                limit,
+                authorId,
+                userId,
+                brewMethod,
+                difficulty,
+                roastLevel
+            )
             call.respond(recipesPage.toDto())
         }
 
         get("/{id}") {
-            val id = call.parameters["id"]?.let { RecipeId(Uuid.parse(it)) }
+            val id = call.pathParameters["id"]
+                ?.toId(::RecipeId)
                 ?: return@get call.respond(HttpStatusCode.BadRequest)
             val userId = call.principal<FirebasePrincipal>()?.id
             recipeService.getById(id, userId).fold(
-                ifLeft = { call.respondError(it.toHttpStatus(), it.toError()) },
+                ifLeft = { call.respondError(it, GetRecipeError::toHttp) },
                 ifRight = { call.respond(it.toDto()) },
             )
         }
 
         get("/{id}/comments") {
-            val id = call.parameters["id"]?.let { RecipeId(Uuid.parse(it)) }
+            val id = call.pathParameters["id"]
+                ?.toId(::RecipeId)
                 ?: return@get call.respond(HttpStatusCode.BadRequest)
             val page = call.request.queryParameters["page"]?.toIntOrNull() ?: 1
             val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 20
             recipeService.listComments(id, page, limit).fold(
-                ifLeft = { call.respondError(it.toHttpStatus(), it.toError()) },
-                ifRight = { result ->
-                    call.respond(
-                        PageResponseDto(
-                            items = result.items.map { it.toDto() },
-                            pagination = PaginationResponseDto(
-                                currentPage = result.currentPage,
-                                itemsCount = result.itemsCount,
-                                lastPage = result.lastPage,
-                                nextPage = result.nextPage,
-                            ),
-                        )
-                    )
-                },
+                ifLeft = { call.respondError(it, ListRecipeCommentsError::toHttp) },
+                ifRight = { result -> call.respond(result.toDto { it.toDto() }) },
             )
         }
 
@@ -94,66 +104,76 @@ fun Route.recipeRoutes() {
                 val userId = call.principal<FirebasePrincipal>()!!.id
                 val body = call.receive<CreateRecipeRequestDto>()
                 recipeService.create(userId, body.toInput()).fold(
-                    ifLeft = { call.respondError(it.toHttpStatus(), it.toError()) },
+                    ifLeft = { call.respondError(it, CreateRecipeError::toHttp) },
                     ifRight = { call.respond(HttpStatusCode.Created, it.toDto()) },
                 )
             }
 
             put("/{id}") {
-                val id = call.parameters["id"]?.let { RecipeId(Uuid.parse(it)) }
+                val id = call.pathParameters["id"]
+                    ?.toId(::RecipeId)
                     ?: return@put call.respond(HttpStatusCode.BadRequest)
                 val userId = call.principal<FirebasePrincipal>()!!.id
                 val body = call.receive<CreateRecipeRequestDto>()
                 recipeService.update(userId, id, body.toInput()).fold(
-                    ifLeft = { call.respondError(it.toHttpStatus(), it.toError()) },
+                    ifLeft = { call.respondError(it, UpdateRecipeError::toHttp) },
                     ifRight = { call.respond(it.toDto()) },
                 )
             }
 
             delete("/{id}") {
-                val id = call.parameters["id"]?.let { RecipeId(Uuid.parse(it)) }
+                val id = call.pathParameters["id"]
+                    ?.toId(::RecipeId)
                     ?: return@delete call.respond(HttpStatusCode.BadRequest)
                 val userId = call.principal<FirebasePrincipal>()!!.id
                 recipeService.delete(userId, id).fold(
-                    ifLeft = { call.respondError(it.toHttpStatus(), it.toError()) },
-                    ifRight = { call.respond(HttpStatusCode.NoContent) },
+                    ifLeft = { call.respond(HttpStatusCode.NoContent) },
+                    ifRight = { call.respond(HttpStatusCode.NoContent) }
                 )
             }
 
             post("/{id}/like") {
-                val id = call.parameters["id"]?.let { RecipeId(Uuid.parse(it)) }
+                val id = call.pathParameters["id"]
+                    ?.toId(::RecipeId)
                     ?: return@post call.respond(HttpStatusCode.BadRequest)
                 val userId = call.principal<FirebasePrincipal>()!!.id
                 recipeService.toggleLike(userId, id).fold(
-                    ifLeft = { call.respondError(it.toHttpStatus(), it.toError()) },
-                    ifRight = { call.respond(RecipeLikeDto(isLiked = it.isLiked, likesCount = it.count)) },
+                    ifLeft = { call.respondError(it, ToggleLikeError::toHttp) },
+                    ifRight = { call.respond(it.toDto()) },
                 )
             }
 
             post("/{id}/comments") {
-                val id = call.parameters["id"]?.let { RecipeId(Uuid.parse(it)) }
+                val id = call.pathParameters["id"]
+                    ?.toId(::RecipeId)
                     ?: return@post call.respond(HttpStatusCode.BadRequest)
                 val userId = call.principal<FirebasePrincipal>()!!.id
                 val body = call.receive<CreateCommentRequestDto>()
                 val parentId = body.parentId?.let { CommentId(Uuid.parse(it)) }
                 recipeService.createComment(userId, id, body.text, parentId).fold(
-                    ifLeft = { call.respondError(it.toHttpStatus(), it.toError()) },
+                    ifLeft = { call.respondError(it, CreateRecipeCommentError::toHttp) },
                     ifRight = { call.respond(HttpStatusCode.Created, it.toDto()) },
                 )
             }
 
             post("/{id}/clone") {
-                val id = call.parameters["id"]?.let { RecipeId(Uuid.parse(it)) }
+                val id = call.pathParameters["id"]
+                    ?.toId(::RecipeId)
                     ?: return@post call.respond(HttpStatusCode.BadRequest)
                 val userId = call.principal<FirebasePrincipal>()!!.id
                 recipeService.clone(userId, id).fold(
-                    ifLeft = { call.respondError(it.toHttpStatus(), it.toError()) },
+                    ifLeft = { call.respondError(it, CloneRecipeError::toHttp) },
                     ifRight = { call.respond(HttpStatusCode.Created, it.toDto()) },
                 )
             }
         }
     }
 }
+
+private fun LikeInfo.toDto() = RecipeLikeDto(
+    isLiked = isLiked,
+    likesCount = count
+)
 
 private fun CreateRecipeRequestDto.toInput() = CreateRecipeInput(
     title = title,
@@ -307,4 +327,51 @@ private fun CommentThread.toDto() = root.toDto().let { r ->
         createdAt = r.createdAt,
         updatedAt = r.updatedAt,
     )
+}
+
+object ApiErrors {
+    val NotFound = HttpStatusCode.NotFound to
+            ApiError(ApiErrorCode.RECIPE_NOT_FOUND, "Recipe not found")
+    val Forbidden = HttpStatusCode.Forbidden to ApiError(ApiErrorCode.FORBIDDEN, "Forbidden")
+}
+
+private fun GetRecipeError.toHttp() = when (this) {
+    GetRecipeError.NotFound -> ApiErrors.NotFound
+    GetRecipeError.Forbidden -> ApiErrors.NotFound
+}
+
+private fun CreateRecipeError.toHttp() = when (this) {
+    is CreateRecipeError.InvalidInput -> HttpStatusCode.UnprocessableEntity to
+            ApiError(ApiErrorCode.INVALID_INPUT, error.message())
+}
+
+private fun UpdateRecipeError.toHttp() = when (this) {
+    UpdateRecipeError.NotFound -> ApiErrors.NotFound
+    UpdateRecipeError.Forbidden -> ApiErrors.Forbidden
+
+    is UpdateRecipeError.InvalidInput -> HttpStatusCode.UnprocessableEntity to
+            ApiError(ApiErrorCode.INVALID_INPUT, error.message())
+}
+
+private fun ToggleLikeError.toHttp() = when (this) {
+    ToggleLikeError.RecipeNotFound -> ApiErrors.NotFound
+}
+
+private fun ListRecipeCommentsError.toHttp() = when (this) {
+    ListRecipeCommentsError.RecipeNotFound -> ApiErrors.NotFound
+}
+
+private fun CreateRecipeCommentError.toHttp() = when (this) {
+    CreateRecipeCommentError.RecipeNotFound -> ApiErrors.NotFound
+    is CreateRecipeCommentError.CommentError -> error.toHttp()
+}
+
+private fun CloneRecipeError.toHttp() = when (this) {
+    CloneRecipeError.Forbidden -> ApiErrors.NotFound
+    CloneRecipeError.NotFound -> ApiErrors.NotFound
+}
+
+private fun RecipeValidationError.message() = when (this) {
+    RecipeValidationError.DescriptionEmpty -> "The description cannot be empty"
+    RecipeValidationError.TitleEmpty -> "The header cannot be empty"
 }
