@@ -303,6 +303,13 @@ private fun UpdatePostError.toHttp() =
           HttpStatusCode.NotFound to ApiError(ApiErrorCode.POST_NOT_FOUND, "Post not found")
 
       is UpdatePostError.ValidationError -> error.toHttp()
+
+      is UpdatePostError.ImagesNotUploaded ->
+          HttpStatusCode.UnprocessableEntity to
+              ApiError(
+                  ApiErrorCode.INVALID_INPUT,
+                  "The following images were not uploaded: ${this.ids.joinToString(", ")}",
+              )
     }
 
 private fun VotePostError.toHttp() =

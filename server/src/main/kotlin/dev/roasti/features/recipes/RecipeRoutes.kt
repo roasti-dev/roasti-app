@@ -366,6 +366,13 @@ private fun CreateRecipeError.toHttp() =
       is CreateRecipeError.InvalidInput ->
           HttpStatusCode.UnprocessableEntity to
               ApiError(ApiErrorCode.INVALID_INPUT, error.message())
+
+      is CreateRecipeError.ImagesNotUploaded ->
+          HttpStatusCode.UnprocessableEntity to
+              ApiError(
+                  ApiErrorCode.INVALID_INPUT,
+                  "The following images were not uploaded: ${ids.joinToString(", ")}",
+              )
     }
 
 private fun UpdateRecipeError.toHttp() =
@@ -376,6 +383,13 @@ private fun UpdateRecipeError.toHttp() =
       is UpdateRecipeError.InvalidInput ->
           HttpStatusCode.UnprocessableEntity to
               ApiError(ApiErrorCode.INVALID_INPUT, error.message())
+
+      is UpdateRecipeError.ImagesNotUploaded ->
+          HttpStatusCode.UnprocessableEntity to
+              ApiError(
+                  ApiErrorCode.INVALID_INPUT,
+                  "The following images were not uploaded: ${ids.joinToString(", ")}",
+              )
     }
 
 private fun ToggleLikeError.toHttp() =

@@ -8,22 +8,18 @@ import dev.roasti.feature.recipe.data.remote.model.RoastLevelDto
 import dev.roasti.feature.recipe.data.remote.model.request.CreateRecipeRequestDto
 import dev.roasti.feature.recipe.data.remote.model.request.CreateRecipeStepRequestDto
 import dev.roasti.feature.recipe.data.remote.model.response.RecipeResponseDto
-import dev.roasti.feature.upload.data.remote.model.response.ImageUploadResponseDto
 import dev.roasti.jsonClient
 import dev.roasti.newAuthenticatedClient
+import dev.roasti.uploadImage
 import dev.roasti.withApp
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
-import io.ktor.client.request.forms.MultiPartFormDataContent
-import io.ktor.client.request.forms.formData
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
-import io.ktor.http.Headers
-import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
@@ -62,34 +58,6 @@ class RecipeTest {
   private suspend fun ApplicationTestBuilder.toggleLike(client: HttpClient, recipeId: String) {
     val response = client.post("/api/v1/recipes/$recipeId/like")
     assertEquals(HttpStatusCode.OK, response.status)
-  }
-
-  private suspend fun ApplicationTestBuilder.uploadImage(client: HttpClient): String {
-    val jpeg = run {
-      val img = java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_RGB)
-      val baos = java.io.ByteArrayOutputStream()
-      javax.imageio.ImageIO.write(img, "jpeg", baos)
-      baos.toByteArray()
-    }
-    val response =
-        client.post("/api/v1/uploads/images") {
-          setBody(
-              MultiPartFormDataContent(
-                  formData {
-                    append(
-                        "file",
-                        jpeg,
-                        Headers.build {
-                          append(HttpHeaders.ContentDisposition, "filename=\"test.jpg\"")
-                          append(HttpHeaders.ContentType, "image/jpeg")
-                        },
-                    )
-                  }
-              )
-          )
-        }
-    assertEquals(HttpStatusCode.Created, response.status)
-    return response.body<ImageUploadResponseDto>().id
   }
 
   @Test

@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.raise.either
 import dev.roasti.common.api.FieldError
+import dev.roasti.features.uploads.UploadService
 import dev.roasti.features.users.UpdateUserError
 import dev.roasti.features.users.UpdateUserFields
 import dev.roasti.features.users.UserRepository
@@ -17,6 +18,8 @@ sealed interface UpdateProfileError {
   data object UsernameTaken : UpdateProfileError
 
   data class InvalidInput(val errors: NonEmptyList<FieldError>) : UpdateProfileError
+
+  data object AvatarNotUploaded : UpdateProfileError
 }
 
 data class UpdateProfileInput(
@@ -26,7 +29,7 @@ data class UpdateProfileInput(
     val avatarId: String? = null,
 )
 
-class UpdateProfile(private val repo: UserRepository) {
+class UpdateProfile(private val repo: UserRepository, private val uploadService: UploadService) {
   suspend operator fun invoke(
       id: UserId,
       input: UpdateProfileInput,
@@ -36,10 +39,23 @@ class UpdateProfile(private val repo: UserRepository) {
           Username.create(it).mapLeft { errs -> UpdateProfileError.InvalidInput(errs) }.bind()
         }
 
-    repo
-        .update(id, UpdateUserFields(username, input.name, input.bio, input.avatarId))
-        .mapLeft { it.toUpdateProfileError() }
-        .bind()
+    val uploadedAvatar =
+        input.avatarId?.let { avatarId ->
+          uploadService
+              .resolveImageIds(listOf(avatarId), id)
+              .mapLeft { UpdateProfileError.AvatarNotUploaded }
+              .bind()
+        }
+
+    val user =
+        repo
+            .update(id, UpdateUserFields(username, input.name, input.bio, input.avatarId))
+            .mapLeft { it.toUpdateProfileError() }
+            .bind()
+
+    uploadedAvatar?.let { uploadService.confirmAll(it) }
+
+    user
   }
 }
 

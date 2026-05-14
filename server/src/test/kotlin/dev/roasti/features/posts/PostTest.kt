@@ -13,6 +13,7 @@ import dev.roasti.feature.post.data.remote.model.response.PostResponseDto
 import dev.roasti.feature.post.data.remote.model.response.PostVoteResponseDto
 import dev.roasti.jsonClient
 import dev.roasti.newAuthenticatedClient
+import dev.roasti.uploadImage
 import dev.roasti.withApp
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -65,7 +66,7 @@ class PostTest {
   @Test
   fun `create post - happy path images only`() = withApp {
     val client = newAuthenticatedClient()
-    val images = listOf("img-1", "img-2")
+    val images = listOf(uploadImage(client), uploadImage(client))
     val post = createPost(client, CreatePostRequestDto(title = "Images only", images = images))
     assertEquals(images, post.images)
   }

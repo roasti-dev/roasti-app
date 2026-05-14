@@ -83,12 +83,18 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.Base64
 import java.util.UUID
+import kotlin.time.Duration.Companion.hours
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.koin.dsl.module
+import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
 import org.slf4j.event.Level
 
@@ -132,7 +138,7 @@ fun Application.module() {
           single<UserRepository> { UserRepositoryImpl() }
           single { GetCurrentUser(get()) }
           single { GetUserProfile(get()) }
-          single { UpdateProfile(get()) }
+          single { UpdateProfile(get(), get()) }
           single { CheckUsernameAvailability(get()) }
           single<FirebaseSigner> {
             FirebaseSignerImpl(firebaseApiKey, identityBaseUrl, tokenBaseUrl)
@@ -148,7 +154,7 @@ fun Application.module() {
           single<VoteRepository> { VoteRepositoryImpl() }
           single<VoteService> { VoteServiceImpl(get()) }
           single<RecipeRepository> { RecipeRepositoryImpl() }
-          single<RecipeService> { RecipeServiceImpl(get(), get(), get()) }
+          single<RecipeService> { RecipeServiceImpl(get(), get(), get(), get()) }
           single<FileStorage> { LocalFileStorage(uploadsDir) }
           single<UploadRepository> { UploadRepositoryImpl() }
           single<UploadService> { UploadServiceImpl(get(), get()) }
@@ -208,6 +214,23 @@ fun Application.module() {
       recipeRoutes()
       commentRoutes()
       uploadRoutes()
+    }
+  }
+
+  startUploadGcJob()
+}
+
+@OptIn(DelicateCoroutinesApi::class)
+private fun Application.startUploadGcJob() {
+  val uploadService by inject<UploadService>()
+  GlobalScope.launch {
+    while (true) {
+      delay(1.hours)
+      try {
+        uploadService.cleanupExpired()
+      } catch (e: Exception) {
+        log.error("Upload GC job failed", e)
+      }
     }
   }
 }

@@ -2,7 +2,6 @@ package dev.roasti.features.posts
 
 import arrow.core.Either
 import arrow.core.getOrElse
-import arrow.core.raise.context.bind
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import dev.roasti.common.domain.Page
@@ -44,6 +43,8 @@ sealed interface UpdatePostError {
   data object Forbidden : UpdatePostError
 
   data class ValidationError(val error: PostContentValidationError) : UpdatePostError
+
+  data class ImagesNotUploaded(val ids: List<String>) : UpdatePostError
 }
 
 sealed interface DeletePostError {
@@ -139,10 +140,14 @@ class PostServiceImpl(
           }
         }
 
-        //        val missing = input.images.filter { uploadsService.findById(it) == null }
-        //        if (missing.isNotEmpty()) raise(CreatePostError.ImagesNotUploaded(missing))
+        val uploaded =
+            uploadsService
+                .resolveImageIds(input.images, userId)
+                .mapLeft { CreatePostError.ImagesNotUploaded(it.toList()) }
+                .bind()
 
         val row = repo.create(userId, input)
+        uploadsService.confirmAll(uploaded)
         row.enrich(userId)
       }
 
@@ -161,7 +166,15 @@ class PostServiceImpl(
 
     val existing = repo.findById(postId) ?: raise(UpdatePostError.NotFound)
     if (existing.author.id != userId) raise(UpdatePostError.Forbidden)
+
+    val uploaded =
+        uploadsService
+            .resolveImageIds(input.images, userId)
+            .mapLeft { UpdatePostError.ImagesNotUploaded(it.toList()) }
+            .bind()
+
     val row = repo.update(postId, input) ?: raise(UpdatePostError.NotFound)
+    uploadsService.confirmAll(uploaded)
     row.enrich(userId)
   }
 

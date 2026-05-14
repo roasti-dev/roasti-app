@@ -123,4 +123,8 @@ private fun UpdateProfileError.toHttp() =
 
       UpdateProfileError.UsernameTaken ->
           HttpStatusCode.Conflict to ApiError(ApiErrorCode.USERNAME_TAKEN, "name is unavailable")
+
+      UpdateProfileError.AvatarNotUploaded ->
+          HttpStatusCode.UnprocessableEntity to
+              ApiError(ApiErrorCode.INVALID_INPUT, "The avatar image was not uploaded")
     }

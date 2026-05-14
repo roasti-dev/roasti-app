@@ -8,6 +8,8 @@ interface FileStorage {
   suspend fun save(id: String, bytes: ByteArray)
 
   suspend fun load(id: String): ByteArray?
+
+  suspend fun delete(id: String)
 }
 
 class LocalFileStorage(private val dir: File) : FileStorage {
@@ -24,4 +26,7 @@ class LocalFileStorage(private val dir: File) : FileStorage {
         val file = File(dir, id)
         if (file.exists()) file.readBytes() else null
       }
+
+  override suspend fun delete(id: String): Unit =
+      withContext(Dispatchers.IO) { File(dir, id).delete() }
 }

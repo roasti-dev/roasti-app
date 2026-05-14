@@ -2,14 +2,19 @@ package dev.roasti
 
 import dev.roasti.feature.auth.data.network.model.request.RegisterRequestDto
 import dev.roasti.feature.auth.data.network.model.response.AuthResponseDto
+import dev.roasti.feature.upload.data.remote.model.response.ImageUploadResponseDto
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.config.ApplicationConfig
@@ -17,8 +22,11 @@ import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.config.mergeWith
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
+import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.util.UUID
+import javax.imageio.ImageIO
 import kotlinx.serialization.json.Json
 
 private val testJson = Json {
@@ -47,6 +55,32 @@ fun withApp(block: suspend ApplicationTestBuilder.() -> Unit) {
 fun ApplicationTestBuilder.jsonClient(token: String? = null): HttpClient = createClient {
   install(ContentNegotiation) { json(testJson) }
   if (token != null) defaultRequest { bearerAuth(token) }
+}
+
+suspend fun ApplicationTestBuilder.uploadImage(client: HttpClient): String {
+  val img = BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB)
+  val baos = ByteArrayOutputStream()
+  ImageIO.write(img, "jpeg", baos)
+  val bytes = baos.toByteArray()
+  return client
+      .post("/api/v1/uploads/images") {
+        setBody(
+            MultiPartFormDataContent(
+                formData {
+                  append(
+                      "file",
+                      bytes,
+                      Headers.build {
+                        append(HttpHeaders.ContentType, "image/jpeg")
+                        append(HttpHeaders.ContentDisposition, "filename=image.jpg")
+                      },
+                  )
+                }
+            )
+        )
+      }
+      .body<ImageUploadResponseDto>()
+      .id
 }
 
 suspend fun ApplicationTestBuilder.newAuthenticatedClient(): HttpClient {

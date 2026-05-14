@@ -16,6 +16,7 @@ import dev.roasti.features.comments.CreateCommentError
 import dev.roasti.features.likes.LikeInfo
 import dev.roasti.features.likes.LikeService
 import dev.roasti.features.likes.LikeTargetType
+import dev.roasti.features.uploads.UploadService
 import dev.roasti.features.users.model.UserId
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -27,6 +28,8 @@ sealed interface GetRecipeError {
 
 sealed interface CreateRecipeError {
   data class InvalidInput(val error: RecipeValidationError) : CreateRecipeError
+
+  data class ImagesNotUploaded(val ids: List<String>) : CreateRecipeError
 }
 
 sealed interface UpdateRecipeError {
@@ -35,6 +38,8 @@ sealed interface UpdateRecipeError {
   data object Forbidden : UpdateRecipeError
 
   data class InvalidInput(val error: RecipeValidationError) : UpdateRecipeError
+
+  data class ImagesNotUploaded(val ids: List<String>) : UpdateRecipeError
 }
 
 sealed interface ToggleLikeError {
@@ -115,6 +120,7 @@ class RecipeServiceImpl(
     private val repo: RecipeRepository,
     private val likeService: LikeService,
     private val commentService: CommentService,
+    private val uploadService: UploadService,
 ) : RecipeService {
 
   override suspend fun getById(id: RecipeId, userId: UserId?): Either<GetRecipeError, Recipe> =
@@ -159,7 +165,16 @@ class RecipeServiceImpl(
       input: CreateRecipeInput,
   ): Either<CreateRecipeError, Recipe> = either {
     validateRecipe(input).mapLeft { CreateRecipeError.InvalidInput(it) }.bind()
+
+    val imageIds = input.allImageIds()
+    val uploaded =
+        uploadService
+            .resolveImageIds(imageIds, userId)
+            .mapLeft { CreateRecipeError.ImagesNotUploaded(it.toList()) }
+            .bind()
+
     val row = repo.create(userId, input)
+    uploadService.confirmAll(uploaded)
     val steps = repo.getSteps(row.id)
     row.toRecipe(userId, steps)
   }
@@ -172,7 +187,16 @@ class RecipeServiceImpl(
     validateRecipe(input).mapLeft { UpdateRecipeError.InvalidInput(it) }.bind()
     val existing = repo.findById(id) ?: raise(UpdateRecipeError.NotFound)
     ensure(existing.author.id == userId) { UpdateRecipeError.Forbidden }
+
+    val imageIds = input.allImageIds()
+    val uploaded =
+        uploadService
+            .resolveImageIds(imageIds, userId)
+            .mapLeft { UpdateRecipeError.ImagesNotUploaded(it.toList()) }
+            .bind()
+
     repo.update(id, input)
+    uploadService.confirmAll(uploaded)
     val steps = repo.getSteps(id)
     val row = repo.findById(id)!!
     row.toRecipe(userId, steps)
@@ -230,6 +254,9 @@ class RecipeServiceImpl(
         val steps = repo.getSteps(newRow.id)
         newRow.toRecipe(userId, steps)
       }
+
+  private fun CreateRecipeInput.allImageIds(): List<String> =
+      listOfNotNull(imageId) + steps.mapNotNull { it.imageId }
 
   fun RecipeRow.toCloneInput(steps: List<BrewStep>) =
       CreateRecipeInput(

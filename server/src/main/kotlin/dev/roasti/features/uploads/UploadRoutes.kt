@@ -1,11 +1,13 @@
 package dev.roasti.features.uploads
 
 import dev.roasti.FIREBASE_AUTH
+import dev.roasti.FirebasePrincipal
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.PartData
 import io.ktor.http.content.forEachPart
 import io.ktor.server.auth.authenticate
+import io.ktor.server.auth.principal
 import io.ktor.server.request.receiveMultipart
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondBytes
@@ -25,7 +27,9 @@ fun Route.uploadRoutes() {
   route("/uploads/images") {
     authenticate(FIREBASE_AUTH) {
       post {
+        val uploaderId = call.principal<FirebasePrincipal>()!!.id
         val multipart = call.receiveMultipart()
+        var saveResult: SaveUploadError? = null
         var meta: UploadMeta? = null
         var invalidMedia = false
         multipart.forEachPart { part ->
@@ -33,15 +37,26 @@ fun Route.uploadRoutes() {
             val bytes = part.provider().readRemaining().readByteArray()
             val filename = part.originalFileName ?: "upload"
             val contentType = part.contentType?.toString() ?: contentTypeFromFilename(filename)
-            if (bytes.isEmpty() || !contentType.startsWith("image/")) {
+            if (!contentType.startsWith("image/")) {
               invalidMedia = true
             } else {
-              meta = uploadService.save(contentType, bytes)
+              uploadService
+                  .save(contentType, bytes, uploaderId)
+                  .fold(
+                      ifLeft = { saveResult = it },
+                      ifRight = { meta = it },
+                  )
             }
           }
           part.dispose()
         }
         if (invalidMedia) return@post call.respond(HttpStatusCode.UnsupportedMediaType)
+        saveResult?.let { error ->
+          return@post when (error) {
+            SaveUploadError.EmptyFile -> call.respond(HttpStatusCode.UnsupportedMediaType)
+            SaveUploadError.FileTooLarge -> call.respond(HttpStatusCode.PayloadTooLarge)
+          }
+        }
         val result =
             meta ?: return@post call.respond(HttpStatusCode.BadRequest, "missing file field")
         call.respond(HttpStatusCode.Created, UploadResponseDto(result.id))
