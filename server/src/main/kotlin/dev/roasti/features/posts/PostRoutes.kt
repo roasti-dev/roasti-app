@@ -28,6 +28,7 @@ import dev.roasti.features.comments.CreateCommentError
 import dev.roasti.features.comments.toDto
 import dev.roasti.features.comments.toHttp
 import dev.roasti.features.recipes.RecipeId
+import dev.roasti.features.uploads.ImageId
 import dev.roasti.features.users.model.UserPreview
 import dev.roasti.features.votes.VoteDirection
 import dev.roasti.features.votes.VoteInfo
@@ -96,13 +97,17 @@ fun Route.postRoutes() {
           body.recipeId?.let {
             it.toId(::RecipeId) ?: return@post call.respond(HttpStatusCode.BadRequest)
           }
+      val images =
+          body.images.map {
+            it.toId(::ImageId) ?: return@post call.respond(HttpStatusCode.BadRequest)
+          }
       postService
           .create(
               userId,
               PostInput(
                   title = body.title,
                   text = body.text,
-                  images = body.images,
+                  images = images,
                   recipeId = recipeId,
               ),
           )
@@ -121,6 +126,10 @@ fun Route.postRoutes() {
           body.recipeId?.let {
             it.toId(::RecipeId) ?: return@put call.respond(HttpStatusCode.BadRequest)
           }
+      val images =
+          body.images.map {
+            it.toId(::ImageId) ?: return@put call.respond(HttpStatusCode.BadRequest)
+          }
       postService
           .update(
               userId,
@@ -128,7 +137,7 @@ fun Route.postRoutes() {
               PostInput(
                   title = body.title,
                   text = body.text,
-                  images = body.images,
+                  images = images,
                   recipeId = recipeId,
               ),
           )
@@ -199,7 +208,12 @@ private fun VoteDirection.toDto() =
     }
 
 private fun UserPreview.toDto() =
-    PostAuthorDto(id = id.value.toString(), username = username, name = name, avatarId = avatarId)
+    PostAuthorDto(
+        id = id.value.toString(),
+        username = username,
+        name = name,
+        avatarId = avatarId?.value.toString(),
+    )
 
 @OptIn(ExperimentalUuidApi::class)
 private fun Post.toDto() =
@@ -208,7 +222,7 @@ private fun Post.toDto() =
         author = author.toDto(),
         title = title,
         text = text.orEmpty(),
-        images = images,
+        images = images.map { it.value.toString() },
         recipe =
             recipeRef?.let {
               PostRecipeRefDto(

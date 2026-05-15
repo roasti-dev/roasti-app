@@ -89,7 +89,7 @@ fun User.toDto() =
         email = email.value,
         username = username.value,
         name = name,
-        avatarId = avatarId,
+        avatarId = avatarId?.value.toString(),
         bio = bio,
     )
 

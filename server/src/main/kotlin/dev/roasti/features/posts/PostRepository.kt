@@ -2,6 +2,7 @@ package dev.roasti.features.posts
 
 import dev.roasti.common.domain.pageOffset
 import dev.roasti.features.recipes.RecipeId
+import dev.roasti.features.uploads.ImageId
 import dev.roasti.features.users.UserTable
 import dev.roasti.features.users.model.UserId
 import kotlin.time.Clock
@@ -21,7 +22,7 @@ import org.jetbrains.exposed.v1.jdbc.update
 data class PostInput(
     val title: String?,
     val text: String?,
-    val images: List<String>,
+    val images: List<ImageId>,
     val recipeId: RecipeId?,
 )
 
@@ -83,7 +84,7 @@ class PostRepositoryImpl : PostRepository {
             it[PostTable.authorId] = authorId.value
             it[PostTable.title] = input.title
             it[PostTable.text] = input.text
-            it[PostTable.images] = input.images
+            it[PostTable.images] = input.images.map { id -> id.value }
             it[PostTable.recipeId] = input.recipeId?.value
             it[PostTable.createdAt] = now
             it[PostTable.updatedAt] = now
@@ -98,7 +99,7 @@ class PostRepositoryImpl : PostRepository {
           PostTable.update({ PostTable.id eq id.value }) {
             it[title] = input.title
             it[text] = input.text
-            it[images] = input.images
+            it[images] = input.images.map { id -> id.value }
             it[recipeId] = input.recipeId?.value
             it[updatedAt] = Clock.System.now()
           }

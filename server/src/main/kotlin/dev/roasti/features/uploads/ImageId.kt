@@ -1,3 +1,7 @@
 package dev.roasti.features.uploads
 
-@JvmInline value class ImageId(val value: String)
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+import kotlinx.serialization.Serializable
+
+@OptIn(ExperimentalUuidApi::class) @Serializable @JvmInline value class ImageId(val value: Uuid)

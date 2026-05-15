@@ -1,6 +1,7 @@
 package dev.roasti.features.users
 
 import arrow.core.Either
+import dev.roasti.features.uploads.ImageId
 import dev.roasti.features.users.model.Email
 import dev.roasti.features.users.model.User
 import dev.roasti.features.users.model.UserId
@@ -67,7 +68,7 @@ class UserRepositoryImpl : UserRepository {
             it[email] = input.email.value
             it[username] = input.username.value
             it[name] = input.name
-            it[avatarId] = input.avatarId
+            it[avatarId] = input.avatarId?.value
             it[bio] = input.bio
             it[UserTable.createdAt] = input.createdAt
           }
@@ -90,7 +91,7 @@ class UserRepositoryImpl : UserRepository {
                   fields.username?.let { stmt[UserTable.username] = it.value }
                   fields.name?.let { stmt[UserTable.name] = it }
                   fields.bio?.let { stmt[UserTable.bio] = it }
-                  fields.avatarId?.let { stmt[UserTable.avatarId] = it }
+                  fields.avatarId?.let { stmt[UserTable.avatarId] = it.value }
                 }
             if (updated == 0) return@transaction Either.Left(UpdateUserError.NotFound)
             Either.Right(UserTable.selectAll().where { UserTable.id eq id.value }.single().toUser())
@@ -118,5 +119,5 @@ data class UpdateUserFields(
     val username: Username? = null,
     val name: String? = null,
     val bio: String? = null,
-    val avatarId: String? = null,
+    val avatarId: ImageId? = null,
 )

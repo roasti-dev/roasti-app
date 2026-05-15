@@ -1,5 +1,6 @@
 package dev.roasti.features.users
 
+import dev.roasti.features.uploads.ImageId
 import dev.roasti.features.users.model.Email
 import dev.roasti.features.users.model.FirebaseId
 import dev.roasti.features.users.model.User
@@ -17,7 +18,7 @@ object UserTable : UuidTable("users") {
   val email = varchar("email", 255).uniqueIndex()
   val username = varchar("username", 255).uniqueIndex()
   val name = varchar("name", 255).nullable()
-  val avatarId = varchar("avatar_id", 255).nullable()
+  val avatarId = uuid("avatar_id").nullable()
   val bio = text("bio").nullable()
   val createdAt = timestamp("created_at")
 }
@@ -30,7 +31,7 @@ fun ResultRow.toUser() =
         email = Email.fromDb(this[UserTable.email]),
         username = Username.fromDb(this[UserTable.username]),
         name = this[UserTable.name],
-        avatarId = this[UserTable.avatarId],
+        avatarId = this[UserTable.avatarId]?.let(::ImageId),
         bio = this[UserTable.bio],
         createdAt = this[UserTable.createdAt],
     )
@@ -40,7 +41,7 @@ fun ResultRow.toUserPreview() =
         id = UserId(this[UserTable.id].value),
         username = this[UserTable.username],
         name = this[UserTable.name],
-        avatarId = this[UserTable.avatarId],
+        avatarId = this[UserTable.avatarId]?.let(::ImageId),
     )
 
 fun ResultRow.toUserPreview(alias: Alias<UserTable>) =
@@ -48,5 +49,5 @@ fun ResultRow.toUserPreview(alias: Alias<UserTable>) =
         id = UserId(this[alias[UserTable.id]].value),
         username = this[alias[UserTable.username]],
         name = this[alias[UserTable.name]],
-        avatarId = this[alias[UserTable.avatarId]],
+        avatarId = this[alias[UserTable.avatarId]]?.let(::ImageId),
     )

@@ -21,7 +21,7 @@ sealed interface SaveUploadError {
   data object FileTooLarge : SaveUploadError
 }
 
-data class Upload(val id: String, val contentType: String, val bytes: ByteArray)
+data class Upload(val id: ImageId, val contentType: String, val bytes: ByteArray)
 
 interface UploadService {
   suspend fun save(
@@ -30,10 +30,10 @@ interface UploadService {
       uploaderId: UserId,
   ): Either<SaveUploadError, UploadMeta>
 
-  suspend fun findById(id: String): Upload?
+  suspend fun findById(id: ImageId): Upload?
 
   suspend fun resolveImageIds(
-      ids: List<String>,
+      ids: List<ImageId>,
       uploaderId: UserId,
   ): EitherNel<String, List<ImageId>>
 
@@ -55,30 +55,30 @@ class UploadServiceImpl(private val repo: UploadRepository, private val storage:
   ): Either<SaveUploadError, UploadMeta> = either {
     ensure(bytes.isNotEmpty()) { SaveUploadError.EmptyFile }
     ensure(bytes.size <= MAX_SIZE_BYTES) { SaveUploadError.FileTooLarge }
-    val id = Uuid.random().toString()
+    val id = ImageId(Uuid.random())
     storage.save(id, bytes)
     repo.save(id, contentType, uploaderId)
     UploadMeta(id = id, contentType = contentType)
   }
 
-  override suspend fun findById(id: String): Upload? {
+  override suspend fun findById(id: ImageId): Upload? {
     val meta = repo.findById(id) ?: return null
     val bytes = storage.load(id) ?: return null
     return Upload(id = id, contentType = meta.contentType, bytes = bytes)
   }
 
   override suspend fun resolveImageIds(
-      ids: List<String>,
+      ids: List<ImageId>,
       uploaderId: UserId,
   ): EitherNel<String, List<ImageId>> = either {
     val invalid = repo.findInvalidIds(ids, uploaderId)
-    invalid.toNonEmptyListOrNull()?.let { raise(it) }
-    ids.map { ImageId(it) }
+    invalid.map { it.value.toString() }.toNonEmptyListOrNull()?.let { raise(it) }
+    ids
   }
 
   override suspend fun confirmAll(ids: List<ImageId>) {
     if (ids.isEmpty()) return
-    repo.confirmAll(ids.map { it.value })
+    repo.confirmAll(ids)
   }
 
   override suspend fun cleanupExpired() {
@@ -90,7 +90,7 @@ class UploadServiceImpl(private val repo: UploadRepository, private val storage:
       try {
         storage.delete(id)
       } catch (e: Exception) {
-        logger.warn("Failed to delete upload file $id from storage", e)
+        logger.warn("Failed to delete upload file ${id.value} from storage", e)
       }
     }
     repo.deleteAll(ids)

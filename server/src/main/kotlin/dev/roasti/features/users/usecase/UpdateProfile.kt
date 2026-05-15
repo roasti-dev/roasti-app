@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.raise.either
 import dev.roasti.common.api.FieldError
+import dev.roasti.features.uploads.ImageId
 import dev.roasti.features.uploads.UploadService
 import dev.roasti.features.users.UpdateUserError
 import dev.roasti.features.users.UpdateUserFields
@@ -11,6 +12,7 @@ import dev.roasti.features.users.UserRepository
 import dev.roasti.features.users.model.User
 import dev.roasti.features.users.model.UserId
 import dev.roasti.features.users.model.Username
+import kotlin.uuid.Uuid
 
 sealed interface UpdateProfileError {
   data object NotFound : UpdateProfileError
@@ -42,14 +44,17 @@ class UpdateProfile(private val repo: UserRepository, private val uploadService:
     val uploadedAvatar =
         input.avatarId?.let { avatarId ->
           uploadService
-              .resolveImageIds(listOf(avatarId), id)
+              .resolveImageIds(listOf(ImageId(Uuid.parse(avatarId))), id)
               .mapLeft { UpdateProfileError.AvatarNotUploaded }
               .bind()
         }
 
     val user =
         repo
-            .update(id, UpdateUserFields(username, input.name, input.bio, input.avatarId))
+            .update(
+                id,
+                UpdateUserFields(username, input.name, input.bio, uploadedAvatar?.singleOrNull()),
+            )
             .mapLeft { it.toUpdateProfileError() }
             .bind()
 

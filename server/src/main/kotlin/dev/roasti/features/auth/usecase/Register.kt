@@ -14,6 +14,7 @@ import dev.roasti.common.api.FieldError
 import dev.roasti.feature.auth.data.network.model.request.RegisterRequestDto
 import dev.roasti.feature.auth.data.network.model.response.AuthResponseDto
 import dev.roasti.features.auth.FirebaseSigner
+import dev.roasti.features.uploads.ImageId
 import dev.roasti.features.users.UserRepository
 import dev.roasti.features.users.model.Email
 import dev.roasti.features.users.model.FirebaseId
@@ -91,7 +92,7 @@ class Register(
                   email = email,
                   username = username,
                   name = request.name,
-                  avatarId = request.avatarId,
+                  avatarId = request.avatarId?.let { ImageId(Uuid.parse(it)) },
                   bio = request.bio,
                   createdAt = Clock.System.now(),
               )

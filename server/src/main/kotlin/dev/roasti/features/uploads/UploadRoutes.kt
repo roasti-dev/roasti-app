@@ -56,7 +56,7 @@ fun Route.uploadRoutes() {
         }
       }
       val result = meta ?: return@post call.respond(HttpStatusCode.BadRequest, "missing file field")
-      call.respond(HttpStatusCode.Created, UploadResponseDto(result.id))
+      call.respond(HttpStatusCode.Created, UploadResponseDto(result.id.value.toString()))
     }
   }
 

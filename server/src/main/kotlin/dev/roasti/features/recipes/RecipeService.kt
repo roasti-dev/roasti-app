@@ -9,6 +9,7 @@ import dev.roasti.feature.recipe.domain.model.Difficulty
 import dev.roasti.feature.recipe.domain.model.RoastLevel
 import dev.roasti.features.likes.LikeService
 import dev.roasti.features.likes.LikeTargetType
+import dev.roasti.features.uploads.ImageId
 import dev.roasti.features.uploads.UploadService
 import dev.roasti.features.users.model.UserId
 import kotlin.uuid.ExperimentalUuidApi
@@ -192,7 +193,7 @@ class RecipeServiceImpl(
         newRow.toRecipe(userId, steps)
       }
 
-  private fun CreateRecipeInput.allImageIds(): List<String> =
+  private fun CreateRecipeInput.allImageIds(): List<ImageId> =
       listOfNotNull(imageId) + steps.mapNotNull { it.imageId }
 
   fun RecipeRow.toCloneInput(steps: List<BrewStep>) =

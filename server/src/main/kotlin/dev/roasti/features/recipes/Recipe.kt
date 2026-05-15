@@ -3,6 +3,7 @@ package dev.roasti.features.recipes
 import dev.roasti.feature.recipe.domain.model.BrewMethod
 import dev.roasti.feature.recipe.domain.model.Difficulty
 import dev.roasti.feature.recipe.domain.model.RoastLevel
+import dev.roasti.features.uploads.ImageId
 import dev.roasti.features.users.model.UserPreview
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
@@ -20,7 +21,7 @@ data class Recipe(
     val title: String,
     val description: String,
     val note: String?,
-    val imageId: String?,
+    val imageId: ImageId?,
     val brewMethod: BrewMethod,
     val difficulty: Difficulty,
     val roastLevel: RoastLevel,

@@ -8,5 +8,5 @@ import kotlinx.serialization.Serializable
 class UploadImages {
   @Serializable
   @Resource("{id}")
-  data class ById(val parent: UploadImages = UploadImages(), val id: String)
+  data class ById(val parent: UploadImages = UploadImages(), val id: ImageId)
 }

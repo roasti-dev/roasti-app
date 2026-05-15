@@ -35,6 +35,7 @@ import dev.roasti.features.likes.LikeInfo
 import dev.roasti.features.likes.LikeService
 import dev.roasti.features.likes.LikeTarget
 import dev.roasti.features.likes.LikeTargetError
+import dev.roasti.features.uploads.ImageId
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
@@ -88,8 +89,9 @@ fun Route.recipeRoutes() {
     post<Recipes> { _ ->
       val userId = call.principal<FirebasePrincipal>()!!.id
       val body = call.receive<CreateRecipeRequestDto>()
+      val input = body.toInput() ?: return@post call.respond(HttpStatusCode.BadRequest)
       recipeService
-          .create(userId, body.toInput())
+          .create(userId, input)
           .fold(
               ifLeft = { call.respondError(it, CreateRecipeError::toHttp) },
               ifRight = { call.respond(HttpStatusCode.Created, it.toDto()) },
@@ -99,8 +101,9 @@ fun Route.recipeRoutes() {
     put<Recipes.ById> { res ->
       val userId = call.principal<FirebasePrincipal>()!!.id
       val body = call.receive<CreateRecipeRequestDto>()
+      val input = body.toInput() ?: return@put call.respond(HttpStatusCode.BadRequest)
       recipeService
-          .update(userId, res.id, body.toInput())
+          .update(userId, res.id, input)
           .fold(
               ifLeft = { call.respondError(it, UpdateRecipeError::toHttp) },
               ifRight = { call.respond(it.toDto()) },
@@ -130,7 +133,7 @@ fun Route.recipeRoutes() {
     post<Recipes.ById.Comments> { res ->
       val userId = call.principal<FirebasePrincipal>()!!.id
       val body = call.receive<CreateCommentRequestDto>()
-      val parentId = body.parentId?.let { it.toId(::CommentId) }
+      val parentId = body.parentId?.toId(::CommentId)
       commentService
           .create(userId, CommentTarget.Recipe(res.parent.id), body.text, parentId)
           .fold(
@@ -153,28 +156,31 @@ fun Route.recipeRoutes() {
 
 private fun LikeInfo.toDto() = RecipeLikeDto(isLiked = isLiked, likesCount = count)
 
-private fun CreateRecipeRequestDto.toInput() =
-    CreateRecipeInput(
-        title = title,
-        description = description,
-        note = note,
-        imageId = imageId,
-        brewMethod = brewMethod.toDomain(),
-        difficulty = difficulty.toDomain(),
-        roastLevel = roastLevel.toDomain(),
-        beans = beans,
-        public = true,
-        steps =
-            steps.map { step ->
-              CreateBrewStepInput(
-                  title = step.title,
-                  description = step.description,
-                  order = step.order,
-                  durationSeconds = step.durationSeconds,
-                  imageId = step.imageId,
-              )
-            },
-    )
+private fun CreateRecipeRequestDto.toInput(): CreateRecipeInput? {
+  val imageId = imageId?.let { it.toId(::ImageId) ?: return null }
+  val steps =
+      steps.map { step ->
+        CreateBrewStepInput(
+            title = step.title,
+            description = step.description,
+            order = step.order,
+            durationSeconds = step.durationSeconds,
+            imageId = step.imageId?.let { it.toId(::ImageId) ?: return null },
+        )
+      }
+  return CreateRecipeInput(
+      title = title,
+      description = description,
+      note = note,
+      imageId = imageId,
+      brewMethod = brewMethod.toDomain(),
+      difficulty = difficulty.toDomain(),
+      roastLevel = roastLevel.toDomain(),
+      beans = beans,
+      public = true,
+      steps = steps,
+  )
+}
 
 @OptIn(ExperimentalUuidApi::class)
 private fun Recipe.toDto() =
@@ -185,12 +191,12 @@ private fun Recipe.toDto() =
             AuthorResponseDto(
                 id = author.id.value.toString(),
                 username = author.username,
-                avatarId = author.avatarId,
+                avatarId = author.avatarId?.value.toString(),
             ),
         title = title,
         description = description,
         note = note,
-        imageId = imageId,
+        imageId = imageId?.value.toString(),
         brewMethod = brewMethod.toDto(),
         difficulty = difficulty.toDto(),
         roastLevel = roastLevel.toDto(),
@@ -223,7 +229,7 @@ private fun BrewStep.toDto() =
         title = title,
         description = description ?: "",
         durationSeconds = durationSeconds,
-        imageId = imageId,
+        imageId = imageId?.value.toString(),
     )
 
 @OptIn(ExperimentalUuidApi::class)
@@ -233,7 +239,7 @@ private fun RecipeOriginInfo.toDto() =
             AuthorResponseDto(
                 id = author.id.value.toString(),
                 username = author.username,
-                avatarId = author.avatarId,
+                avatarId = author.avatarId?.value.toString(),
             ),
         recipeId = recipeId.value.toString(),
     )

@@ -12,7 +12,10 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 class GetImageTest {
 
   @Test
@@ -36,7 +39,7 @@ class GetImageTest {
     val client = newAuthenticatedClient()
     assertEquals(
         HttpStatusCode.NotFound,
-        client.get("/api/v1/uploads/images/non-existent-id").status,
+        client.get("/api/v1/uploads/images/${Uuid.random()}").status,
     )
   }
 }

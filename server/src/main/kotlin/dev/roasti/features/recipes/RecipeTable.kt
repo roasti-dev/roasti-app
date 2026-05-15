@@ -3,6 +3,7 @@ package dev.roasti.features.recipes
 import dev.roasti.feature.recipe.domain.model.BrewMethod
 import dev.roasti.feature.recipe.domain.model.Difficulty
 import dev.roasti.feature.recipe.domain.model.RoastLevel
+import dev.roasti.features.uploads.ImageId
 import dev.roasti.features.users.UserTable
 import dev.roasti.features.users.model.UserPreview
 import dev.roasti.features.users.toUserPreview
@@ -20,7 +21,7 @@ object RecipeTable : UuidTable("recipes") {
   val title = varchar("title", 255)
   val description = text("description")
   val note = text("note").nullable()
-  val imageId = varchar("image_id", 255).nullable()
+  val imageId = uuid("image_id").nullable()
   val brewMethod = enumerationByName<BrewMethod>("brew_method", 50)
   val difficulty = enumerationByName<Difficulty>("difficulty", 50)
   val roastLevel = enumerationByName<RoastLevel>("roast_level", 50)
@@ -40,7 +41,7 @@ object BrewStepTable : IntIdTable("brew_steps") {
   val description = text("description").nullable()
   val order = integer("order")
   val durationSeconds = integer("duration_seconds").nullable()
-  val imageId = varchar("image_id", 255).nullable()
+  val imageId = uuid("image_id").nullable()
 }
 
 internal val OriginRecipes = RecipeTable.alias("origin_recipes")
@@ -53,7 +54,7 @@ data class RecipeRow(
     val title: String,
     val description: String,
     val note: String?,
-    val imageId: String?,
+    val imageId: ImageId?,
     val brewMethod: BrewMethod,
     val difficulty: Difficulty,
     val roastLevel: RoastLevel,
@@ -78,7 +79,7 @@ fun ResultRow.toRecipeRow() =
         title = this[RecipeTable.title],
         description = this[RecipeTable.description],
         note = this[RecipeTable.note],
-        imageId = this[RecipeTable.imageId],
+        imageId = this[RecipeTable.imageId]?.let(::ImageId),
         brewMethod = this[RecipeTable.brewMethod],
         difficulty = this[RecipeTable.difficulty],
         roastLevel = this[RecipeTable.roastLevel],
@@ -96,5 +97,5 @@ fun ResultRow.toBrewStep() =
         description = this[BrewStepTable.description],
         order = this[BrewStepTable.order],
         durationSeconds = this[BrewStepTable.durationSeconds],
-        imageId = this[BrewStepTable.imageId],
+        imageId = this[BrewStepTable.imageId]?.let(::ImageId),
     )

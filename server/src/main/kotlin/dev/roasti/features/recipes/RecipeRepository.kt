@@ -4,6 +4,7 @@ import dev.roasti.common.domain.pageOffset
 import dev.roasti.feature.recipe.domain.model.BrewMethod
 import dev.roasti.feature.recipe.domain.model.Difficulty
 import dev.roasti.feature.recipe.domain.model.RoastLevel
+import dev.roasti.features.uploads.ImageId
 import dev.roasti.features.users.UserTable
 import dev.roasti.features.users.model.UserId
 import kotlin.time.Clock
@@ -28,7 +29,7 @@ data class CreateRecipeInput(
     val title: String,
     val description: String,
     val note: String?,
-    val imageId: String?,
+    val imageId: ImageId?,
     val brewMethod: BrewMethod,
     val difficulty: Difficulty,
     val roastLevel: RoastLevel,
@@ -43,7 +44,7 @@ data class CreateBrewStepInput(
     val description: String?,
     val order: Int,
     val durationSeconds: Int?,
-    val imageId: String?,
+    val imageId: ImageId?,
 )
 
 interface RecipeRepository {
@@ -142,7 +143,7 @@ class RecipeRepositoryImpl : RecipeRepository {
             it[RecipeTable.title] = input.title
             it[RecipeTable.description] = input.description
             it[RecipeTable.note] = input.note
-            it[RecipeTable.imageId] = input.imageId
+            it[RecipeTable.imageId] = input.imageId?.value
             it[RecipeTable.brewMethod] = input.brewMethod
             it[RecipeTable.difficulty] = input.difficulty
             it[RecipeTable.roastLevel] = input.roastLevel
@@ -168,7 +169,7 @@ class RecipeRepositoryImpl : RecipeRepository {
             it[title] = input.title
             it[description] = input.description
             it[note] = input.note
-            it[imageId] = input.imageId
+            it[imageId] = input.imageId?.value
             it[brewMethod] = input.brewMethod
             it[difficulty] = input.difficulty
             it[roastLevel] = input.roastLevel
@@ -234,7 +235,7 @@ class RecipeRepositoryImpl : RecipeRepository {
         it[BrewStepTable.description] = step.description
         it[BrewStepTable.order] = step.order
         it[BrewStepTable.durationSeconds] = step.durationSeconds
-        it[BrewStepTable.imageId] = step.imageId
+        it[BrewStepTable.imageId] = step.imageId?.value
       }
     }
   }

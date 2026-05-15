@@ -1,12 +1,14 @@
 package dev.roasti.features.posts
 
 import dev.roasti.features.recipes.RecipeId
+import dev.roasti.features.uploads.ImageId
 import dev.roasti.features.users.UserTable
 import dev.roasti.features.users.model.UserPreview
 import dev.roasti.features.users.toUserPreview
 import dev.roasti.features.votes.VoteInfo
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import org.jetbrains.exposed.v1.core.ReferenceOption
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.dao.id.UuidTable
@@ -17,7 +19,7 @@ object PostTable : UuidTable("posts") {
   val authorId = reference("author_id", UserTable, onDelete = ReferenceOption.CASCADE)
   val title = varchar("title", 500).nullable()
   val text = text("text").nullable()
-  val images = array<String>("images")
+  val images = array<Uuid>("images")
   val recipeId = uuid("recipe_id").nullable()
   val createdAt = timestamp("created_at")
   val updatedAt = timestamp("updated_at")
@@ -29,7 +31,7 @@ data class PostRow(
     val author: UserPreview,
     val title: String?,
     val text: String?,
-    val images: List<String>,
+    val images: List<ImageId>,
     val recipeId: RecipeId?,
     val createdAt: Instant,
     val updatedAt: Instant,
@@ -42,7 +44,7 @@ internal fun ResultRow.toPostRow() =
         author = toUserPreview(),
         title = this[PostTable.title],
         text = this[PostTable.text],
-        images = this[PostTable.images],
+        images = this[PostTable.images].map(::ImageId),
         recipeId = this[PostTable.recipeId]?.let(::RecipeId),
         createdAt = this[PostTable.createdAt],
         updatedAt = this[PostTable.updatedAt],

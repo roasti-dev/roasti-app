@@ -1,6 +1,7 @@
 package dev.roasti.features.posts
 
 import dev.roasti.features.recipes.RecipeId
+import dev.roasti.features.uploads.ImageId
 import dev.roasti.features.users.model.UserPreview
 import dev.roasti.features.votes.VoteDirection
 import kotlin.time.Instant
@@ -25,7 +26,7 @@ data class Post(
     val author: UserPreview,
     val title: String?,
     val text: String?,
-    val images: List<String>,
+    val images: List<ImageId>,
     val recipeRef: RecipeRef?,
     val rating: Int,
     val userVote: VoteDirection,

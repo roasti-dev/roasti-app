@@ -59,7 +59,7 @@ internal fun Comment.toDto() =
                       author.id.value.toString(),
                       author.username,
                       author.name,
-                      author.avatarId,
+                      author.avatarId?.value.toString(),
                   ),
               text = text,
               parentId = parentId?.value?.toString(),

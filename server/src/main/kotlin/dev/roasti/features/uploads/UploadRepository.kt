@@ -5,7 +5,6 @@ import dev.roasti.features.users.model.UserId
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.v1.core.and
@@ -19,31 +18,30 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
-data class UploadMeta(val id: String, val contentType: String)
+data class UploadMeta(val id: ImageId, val contentType: String)
 
 interface UploadRepository {
-  suspend fun save(id: String, contentType: String, uploaderId: UserId)
+  suspend fun save(id: ImageId, contentType: String, uploaderId: UserId)
 
-  suspend fun findById(id: String): UploadMeta?
+  suspend fun findById(id: ImageId): UploadMeta?
 
-  suspend fun findInvalidIds(ids: List<String>, uploaderId: UserId): List<String>
+  suspend fun findInvalidIds(ids: List<ImageId>, uploaderId: UserId): List<ImageId>
 
-  suspend fun confirmAll(ids: List<String>)
+  suspend fun confirmAll(ids: List<ImageId>)
 
-  suspend fun findUnconfirmedBefore(cutoff: Instant): List<String>
+  suspend fun findUnconfirmedBefore(cutoff: Instant): List<ImageId>
 
-  suspend fun deleteAll(ids: List<String>)
+  suspend fun deleteAll(ids: List<ImageId>)
 }
 
 @OptIn(ExperimentalUuidApi::class)
 class UploadRepositoryImpl : UploadRepository {
 
-  override suspend fun save(id: String, contentType: String, uploaderId: UserId): Unit =
+  override suspend fun save(id: ImageId, contentType: String, uploaderId: UserId): Unit =
       withContext(Dispatchers.IO) {
-        val uuid = Uuid.parse(id)
         transaction {
           UploadTable.insert {
-            it[UploadTable.id] = EntityID(uuid, UploadTable)
+            it[UploadTable.id] = EntityID(id.value, UploadTable)
             it[UploadTable.contentType] = contentType
             it[UploadTable.uploaderId] = EntityID(uploaderId.value, UserTable)
             it[UploadTable.createdAt] = Clock.System.now()
@@ -51,53 +49,54 @@ class UploadRepositoryImpl : UploadRepository {
         }
       }
 
-  override suspend fun findById(id: String): UploadMeta? =
+  override suspend fun findById(id: ImageId): UploadMeta? =
       withContext(Dispatchers.IO) {
-        val uuid = runCatching { Uuid.parse(id) }.getOrNull() ?: return@withContext null
         transaction {
           UploadTable.selectAll()
-              .where { UploadTable.id eq uuid }
+              .where { UploadTable.id eq id.value }
               .singleOrNull()
               ?.let { UploadMeta(id = id, contentType = it[UploadTable.contentType]) }
         }
       }
 
-  override suspend fun findInvalidIds(ids: List<String>, uploaderId: UserId): List<String> =
+  override suspend fun findInvalidIds(ids: List<ImageId>, uploaderId: UserId): List<ImageId> =
       withContext(Dispatchers.IO) {
         if (ids.isEmpty()) return@withContext emptyList()
-        val uuids = ids.mapNotNull { runCatching { Uuid.parse(it) }.getOrNull() }
-        val validIds = transaction {
+        val uuids = ids.map { it.value }
+        val validUuids = transaction {
           UploadTable.selectAll()
               .where {
                 (UploadTable.id inList uuids) and
                     (UploadTable.uploaderId eq EntityID(uploaderId.value, UserTable))
               }
-              .map { it[UploadTable.id].value.toString() }
+              .map { it[UploadTable.id].value }
               .toSet()
         }
-        ids.filter { it !in validIds }
+        ids.filter { it.value !in validUuids }
       }
 
-  override suspend fun confirmAll(ids: List<String>): Unit =
+  override suspend fun confirmAll(ids: List<ImageId>): Unit =
       withContext(Dispatchers.IO) {
         if (ids.isEmpty()) return@withContext
-        val uuids = ids.mapNotNull { runCatching { Uuid.parse(it) }.getOrNull() }
-        transaction { UploadTable.update({ UploadTable.id inList uuids }) { it[confirmed] = true } }
+        transaction {
+          UploadTable.update({ UploadTable.id inList ids.map { it.value } }) {
+            it[confirmed] = true
+          }
+        }
       }
 
-  override suspend fun findUnconfirmedBefore(cutoff: Instant): List<String> =
+  override suspend fun findUnconfirmedBefore(cutoff: Instant): List<ImageId> =
       withContext(Dispatchers.IO) {
         transaction {
           UploadTable.selectAll()
               .where { (UploadTable.confirmed eq false) and (UploadTable.createdAt less cutoff) }
-              .map { it[UploadTable.id].value.toString() }
+              .map { ImageId(it[UploadTable.id].value) }
         }
       }
 
-  override suspend fun deleteAll(ids: List<String>): Unit =
+  override suspend fun deleteAll(ids: List<ImageId>): Unit =
       withContext(Dispatchers.IO) {
         if (ids.isEmpty()) return@withContext
-        val uuids = ids.mapNotNull { runCatching { Uuid.parse(it) }.getOrNull() }
-        transaction { UploadTable.deleteWhere { UploadTable.id inList uuids } }
+        transaction { UploadTable.deleteWhere { UploadTable.id inList ids.map { it.value } } }
       }
 }
