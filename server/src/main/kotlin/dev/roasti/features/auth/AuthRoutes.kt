@@ -6,6 +6,7 @@ import dev.roasti.common.api.ApiErrorCode
 import dev.roasti.common.api.respondError
 import dev.roasti.common.api.toHttp
 import dev.roasti.feature.auth.data.network.model.request.LoginRequestDto
+import dev.roasti.feature.auth.data.network.model.request.RefreshRequestDto
 import dev.roasti.feature.auth.data.network.model.request.RegisterRequestDto
 import dev.roasti.features.auth.usecase.Login
 import dev.roasti.features.auth.usecase.LoginError
@@ -20,13 +21,7 @@ import io.ktor.server.request.receive
 import io.ktor.server.resources.post
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 import org.koin.ktor.ext.inject
-
-@Serializable data class RefreshRequestBody(@SerialName("refresh_token") val refreshToken: String)
-
-@Serializable data class LogoutRequestBody(@SerialName("refresh_token") val refreshToken: String)
 
 fun Route.authRoutes() {
   val register by inject<Register>()
@@ -53,7 +48,7 @@ fun Route.authRoutes() {
   }
 
   post<Auth.Refresh> { _ ->
-    val body = call.receive<RefreshRequestBody>()
+    val body = call.receive<RefreshRequestDto>()
     refreshToken(body.refreshToken)
         .fold(
             ifLeft = { call.respondError(it, RefreshError::toHttp) },
@@ -63,7 +58,7 @@ fun Route.authRoutes() {
 
   authenticate(FIREBASE_AUTH) {
     post<Auth.Logout> { _ ->
-      val body = call.receive<LogoutRequestBody>()
+      val body = call.receive<RefreshRequestDto>()
       logout(body.refreshToken)
       call.respond(HttpStatusCode.NoContent)
     }

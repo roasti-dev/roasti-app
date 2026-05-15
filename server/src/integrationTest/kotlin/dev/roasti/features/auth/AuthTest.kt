@@ -1,6 +1,7 @@
 package dev.roasti.features.auth
 
 import dev.roasti.feature.auth.data.network.model.request.LoginRequestDto
+import dev.roasti.feature.auth.data.network.model.request.LogoutRequestDto
 import dev.roasti.feature.auth.data.network.model.request.RefreshRequestDto
 import dev.roasti.feature.auth.data.network.model.request.RegisterRequestDto
 import dev.roasti.feature.auth.data.network.model.response.AuthResponseDto
@@ -207,7 +208,7 @@ class AuthTest {
     val response =
         jsonClient(auth.accessToken).post("/api/v1/auth/logout") {
           contentType(ContentType.Application.Json)
-          setBody(LogoutRequestBody(refreshToken = auth.refreshToken))
+          setBody(LogoutRequestDto(refreshToken = auth.refreshToken))
         }
     assertEquals(HttpStatusCode.NoContent, response.status)
   }
@@ -221,7 +222,7 @@ class AuthTest {
       val response =
           jsonClient(auth.accessToken).post("/api/v1/auth/logout") {
             contentType(ContentType.Application.Json)
-            setBody(LogoutRequestBody(refreshToken = auth.refreshToken))
+            setBody(LogoutRequestDto(refreshToken = auth.refreshToken))
           }
       assertEquals(HttpStatusCode.NoContent, response.status)
     }
@@ -234,7 +235,7 @@ class AuthTest {
 
     jsonClient(auth.accessToken).post("/api/v1/auth/logout") {
       contentType(ContentType.Application.Json)
-      setBody(LogoutRequestBody(refreshToken = auth.refreshToken))
+      setBody(LogoutRequestDto(refreshToken = auth.refreshToken))
     }
 
     val response =

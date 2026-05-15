@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
 plugins {
   alias(libs.plugins.kotlinJvm)
   alias(libs.plugins.ktor)
@@ -32,10 +34,7 @@ dependencies {
   implementation(libs.h2)
   implementation(libs.firebase.admin)
   implementation(libs.ktor.server.auth)
-  testImplementation(libs.ktor.server.testHost)
   testImplementation(libs.kotlin.testJunit)
-  testImplementation(libs.ktor.client.content.negotiation)
-  testImplementation(libs.ktor.serialization.kotlinx.json)
 }
 
 kotlin {
@@ -54,14 +53,17 @@ spotless {
   }
 }
 
+val firebaseEmulatorHost = "localhost:9099"
+
 val firebaseEmulatorEnv =
     mapOf(
-        "FIREBASE_AUTH_EMULATOR_HOST" to "localhost:9099",
+        "FIREBASE_AUTH_EMULATOR_HOST" to firebaseEmulatorHost,
         "FIREBASE_API_KEY" to "test",
         "FIREBASE_PROJECT_ID" to "roasti-dev-project",
         "FIREBASE_IDENTITY_BASE_URL" to
-            "http://localhost:9099/identitytoolkit.googleapis.com/v1/accounts",
-        "FIREBASE_TOKEN_BASE_URL" to "http://localhost:9099/securetoken.googleapis.com/v1/token",
+            "http://$firebaseEmulatorHost/identitytoolkit.googleapis.com/v1/accounts",
+        "FIREBASE_TOKEN_BASE_URL" to
+            "http://$firebaseEmulatorHost/securetoken.googleapis.com/v1/token",
     )
 
 tasks.register<Exec>("firebaseEmulator") {
@@ -75,18 +77,37 @@ tasks.register<Exec>("firebaseEmulator") {
 
 tasks.named<JavaExec>("run") { environment(firebaseEmulatorEnv) }
 
-tasks.named<Test>("test") {
-  environment(firebaseEmulatorEnv)
+@Suppress("UnstableApiUsage")
+testing {
+  suites {
+    val test by getting(JvmTestSuite::class) { useJUnitJupiter() }
 
-  testLogging {
-    events("failed")
+    register<JvmTestSuite>("integrationTest") {
+      dependencies {
+        implementation(project())
+        implementation(projects.shared)
+        implementation(libs.kotlin.testJunit)
+        implementation(libs.ktor.server.testHost)
+        implementation(libs.ktor.client.content.negotiation)
+        implementation(libs.ktor.serialization.kotlinx.json)
+      }
+      targets {
+        all {
+          testTask.configure {
+            shouldRunAfter(test)
+            environment(firebaseEmulatorEnv)
+            testLogging {
+              events(TestLogEvent.FAILED)
 
-    exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+              exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
 
-    showExceptions = true
-    showCauses = true
-    showStackTraces = true
+              showExceptions = true
+              showCauses = true
+              showStackTraces = true
+            }
+          }
+        }
+      }
+    }
   }
 }
-
-tasks.register("serverDev") { dependsOn("run") }

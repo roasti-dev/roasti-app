@@ -8,6 +8,7 @@ import dev.roasti.common.api.respondError
 import dev.roasti.common.api.toHttp
 import dev.roasti.feature.auth.data.network.model.request.UpdateProfileRequest
 import dev.roasti.feature.auth.data.network.model.response.UserDto
+import dev.roasti.feature.auth.data.network.model.response.UsernameAvailabilityResponseDto
 import dev.roasti.features.users.model.User
 import dev.roasti.features.users.usecase.CheckUsernameAvailability
 import dev.roasti.features.users.usecase.GetCurrentUser
@@ -25,12 +26,7 @@ import io.ktor.server.resources.patch
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import kotlin.uuid.ExperimentalUuidApi
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 import org.koin.ktor.ext.inject
-
-@Serializable
-data class UsernameAvailabilityResponse(@SerialName("available") val available: Boolean)
 
 fun Route.userRoutes() {
   val getCurrentUser by inject<GetCurrentUser>()
@@ -73,7 +69,7 @@ fun Route.userRoutes() {
   }
 
   get<Users.UsernameAvailability> { res ->
-    call.respond(UsernameAvailabilityResponse(checkUsernameAvailability(res.username)))
+    call.respond(UsernameAvailabilityResponseDto(checkUsernameAvailability(res.username)))
   }
 
   get<Users.ByUsername> { res ->

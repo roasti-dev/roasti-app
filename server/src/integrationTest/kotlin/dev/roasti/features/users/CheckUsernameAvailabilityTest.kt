@@ -1,5 +1,6 @@
 package dev.roasti.features.users
 
+import dev.roasti.feature.auth.data.network.model.response.UsernameAvailabilityResponseDto
 import dev.roasti.jsonClient
 import dev.roasti.newAuthenticatedClient
 import dev.roasti.withApp
@@ -22,7 +23,7 @@ class CheckUsernameAvailabilityTest {
                 "/api/v1/users/username-availability?username=free_${UUID.randomUUID().toString().replace("-", "").take(11)}"
             )
     assertEquals(HttpStatusCode.OK, response.status)
-    assertTrue(response.body<UsernameAvailabilityResponse>().available)
+    assertTrue(response.body<UsernameAvailabilityResponseDto>().available)
   }
 
   @Test
@@ -32,13 +33,13 @@ class CheckUsernameAvailabilityTest {
 
     val response = jsonClient().get("/api/v1/users/username-availability?username=$takenUsername")
     assertEquals(HttpStatusCode.OK, response.status)
-    assertFalse(response.body<UsernameAvailabilityResponse>().available)
+    assertFalse(response.body<UsernameAvailabilityResponseDto>().available)
   }
 
   @Test
   fun `invalid username returns false`() = withApp {
     val response = jsonClient().get("/api/v1/users/username-availability?username=a")
     assertEquals(HttpStatusCode.OK, response.status)
-    assertFalse(response.body<UsernameAvailabilityResponse>().available)
+    assertFalse(response.body<UsernameAvailabilityResponseDto>().available)
   }
 }
