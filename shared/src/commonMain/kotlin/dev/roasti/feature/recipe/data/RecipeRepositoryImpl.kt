@@ -5,7 +5,6 @@ import app.cash.sqldelight.coroutines.mapToList
 import app.cash.sqldelight.coroutines.mapToOneOrNull
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import dev.roasti.RoastiDatabaseCache
@@ -23,11 +22,16 @@ import dev.roasti.feature.recipe.domain.model.RecipeDraft
 import dev.roasti.core.domain.Page
 import dev.roasti.feature.recipe.domain.model.RoastLevel
 
+// TODO: Replace Dispatchers.IO with expect/actual mechanism for KMP compatibility
+//  - commonMain: expect val ioDispatcher: CoroutineDispatcher
+//  - jsMain:     actual val ioDispatcher = Dispatchers.Default
+//  - jvmMain:    actual val ioDispatcher = Dispatchers.IO
+
 class RecipeRepositoryImpl(
     private val apiClient: RecipesApiClient,
     private val db: RoastiDatabaseCache,
     private val likesApiClient: LikesApiClient,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : RecipeRepository {
 
     override suspend fun getRecipes(

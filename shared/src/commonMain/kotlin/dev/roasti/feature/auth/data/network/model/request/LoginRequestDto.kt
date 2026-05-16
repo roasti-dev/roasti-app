@@ -2,8 +2,11 @@ package dev.roasti.feature.auth.data.network.model.request
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.js.ExperimentalJsExport
+import kotlin.js.JsExport
 
 @Serializable
+@JsExport
 data class LoginRequestDto(
     @SerialName("password")
     val password: String,

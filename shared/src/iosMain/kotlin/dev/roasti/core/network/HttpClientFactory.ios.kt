@@ -16,6 +16,8 @@ import dev.roasti.core.config.AppConfig
 
 actual fun createHttpClient(
     accessTokenProvider: () -> String?,
+    baseHost: String,
+    useHttps: Boolean,
 ): HttpClient = HttpClient(Darwin) {
     expectSuccess = true
 

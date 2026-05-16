@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -15,8 +16,15 @@ kotlin {
         
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
-            freeCompilerArgs.add("-Xcontext-parameters")
+            freeCompilerArgs.addAll("-Xcontext-parameters", "-Xexpect-actual-classes")
         }
+    }
+
+    js {
+        browser()
+        binaries.library()
+        useEsModules()
+        generateTypeScriptDefinitions()
     }
     
     jvm()
@@ -53,6 +61,14 @@ kotlin {
             implementation(libs.ktor.client.darwin)
             implementation(libs.sqldelight.native)
         }
+        jsMain {
+            languageSettings {
+                enableLanguageFeature("JsAllowExportingSuspendFunctions")
+            }
+            dependencies {
+                implementation(libs.ktor.client.js)
+            }
+        }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
@@ -64,5 +80,11 @@ sqldelight {
         register("RoastiDatabaseCache") {
             packageName = "dev.roasti"
         }
+    }
+}
+
+tasks.withType<KotlinJsCompile>().configureEach {
+    compilerOptions {
+        target = "es2015"
     }
 }

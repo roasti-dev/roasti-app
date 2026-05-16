@@ -2,8 +2,10 @@ package dev.roasti.feature.auth.data.network.model.request
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.js.JsExport
 
 @Serializable
+@JsExport
 data class RegisterRequestDto(
     @SerialName("avatar_id")
     val avatarId: String? = null,
