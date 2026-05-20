@@ -3,6 +3,7 @@ package dev.roasti.feature.auth.domain.repository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import dev.roasti.feature.auth.domain.model.AuthState
+import dev.roasti.feature.auth.domain.model.PublicUserProfile
 import dev.roasti.feature.auth.domain.model.User
 
 interface AuthRepository {
@@ -30,4 +31,6 @@ interface AuthRepository {
     suspend fun syncProfile(): Result<User>
 
     suspend fun updateProfile(imageId: String? = null, bio: String? = null, username: String? = null): Result<User>
+
+    suspend fun getPublicUserProfile(username: String): Result<PublicUserProfile>
 }

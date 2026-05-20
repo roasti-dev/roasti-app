@@ -25,6 +25,7 @@ import dev.roasti.feature.auth.data.network.model.request.UpdateProfileRequest
 import dev.roasti.feature.auth.data.network.model.response.AuthResponseDto
 import dev.roasti.feature.auth.data.network.model.response.UserDto
 import dev.roasti.feature.auth.domain.model.AuthState
+import dev.roasti.feature.auth.domain.model.PublicUserProfile
 import dev.roasti.feature.auth.domain.model.User
 import dev.roasti.feature.auth.domain.repository.AuthRepository
 
@@ -144,6 +145,10 @@ class AuthRepositoryImpl(
         }
 
         return Result.failure(Throwable("Upload profile error"))
+    }
+
+    override suspend fun getPublicUserProfile(username: String): Result<PublicUserProfile> {
+        return profileApiClient.getUserProfile(username).map { it.toDomain() }
     }
 
     private suspend fun saveUser(user: UserDto) {

@@ -5,6 +5,8 @@ import dev.roasti.feature.auth.data.network.model.response.RefreshResponseDto
 import dev.roasti.feature.auth.data.network.model.response.UserDto
 import dev.roasti.feature.auth.domain.model.User
 import dev.roasti.core.session.UserSession
+import dev.roasti.feature.auth.data.network.model.response.PublicUserDto
+import dev.roasti.feature.auth.domain.model.PublicUserProfile
 
 fun UserDto.toDomain(): User = User(
     avatarId = avatarId,
@@ -23,3 +25,5 @@ fun RefreshResponseDto.toDomain(): UserSession = UserSession(
     accessToken = accessToken,
     refreshToken = refreshToken,
 )
+
+fun PublicUserDto.toDomain() = PublicUserProfile(avatarId, bio, id, name, username)
