@@ -61,6 +61,7 @@ import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import dev.roasti.R
+import dev.roasti.core.utils.imageUrl
 import dev.roasti.ui.features.recipelist.components.LikeButton
 import dev.roasti.ui.features.recipepage.model.RecipeDetailsUiModel
 import dev.roasti.ui.features.recipepage.model.RecipeStepUiModel
@@ -69,8 +70,10 @@ import dev.roasti.ui.theme.Spacing
 import dev.roasti.ui.uikit.ActionButtonPrimary
 import dev.roasti.ui.uikit.AppIcons
 import dev.roasti.ui.uikit.AsyncImagePreviewProvider
+import dev.roasti.ui.uikit.AuthorRow
 import dev.roasti.ui.uikit.state.ContentScaffold
 import dev.roasti.ui.util.recipeImageSharedElementModifier
+import dev.roasti.ui.util.userAvatarSharedElementModifier
 
 private val HeaderHeight = 260.dp
 private val HeaderOverlap = 40.dp
@@ -92,6 +95,7 @@ fun RecipeContentRoute(
     onBackClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
     onStartBrewing: (startStep: Int) -> Unit = {},
+    onAuthorClick: (userId: String, username: String, avatarTag: String?) -> Unit = { _, _, _ -> },
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
@@ -131,6 +135,7 @@ fun RecipeContentRoute(
             onRemoveClick = { showRemoveDialogConfirmation = true },
             onLikeClick = viewModel::toggleLike,
             onStepClick = onStartBrewing,
+            onAuthorClick = onAuthorClick,
         )
     }
 }
@@ -146,6 +151,7 @@ private fun RecipeContentBody(
     onRemoveClick: () -> Unit = {},
     onLikeClick: () -> Unit = {},
     onStepClick: (stepIndex: Int) -> Unit = {},
+    onAuthorClick: (userId: String, username: String, avatarTag: String?) -> Unit = { _, _, _ -> },
 ) {
     val stepModifiers = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
         recipe.steps.indices.map { index ->
@@ -181,10 +187,17 @@ private fun RecipeContentBody(
                     animatedVisibilityScope = animatedVisibilityScope,
                 ),
             )
+            val authorAvatarModifier = userAvatarSharedElementModifier(
+                tag = if (recipe.author != null) "recipe_${recipe.id}" else null,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+            )
             RecipeContentList(
                 recipe = recipe,
                 stepModifiers = stepModifiers,
                 onLikeClick = onLikeClick,
+                onAuthorClick = onAuthorClick,
+                authorAvatarModifier = authorAvatarModifier,
                 bottomContentPadding = innerPadding.calculateBottomPadding(),
                 modifier = Modifier.fillMaxSize(),
             )
@@ -236,6 +249,8 @@ private fun RecipeContentList(
     recipe: RecipeDetailsUiModel,
     stepModifiers: List<Modifier> = emptyList(),
     onLikeClick: () -> Unit = {},
+    onAuthorClick: (userId: String, username: String, avatarTag: String?) -> Unit = { _, _, _ -> },
+    authorAvatarModifier: Modifier = Modifier,
     bottomContentPadding: Dp = 0.dp,
     modifier: Modifier = Modifier,
 ) {
@@ -277,6 +292,16 @@ private fun RecipeContentList(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+            recipe.author?.let { author ->
+                AuthorRow(
+                    imageUrl = author.avatarId?.let { imageUrl(it) },
+                    name = author.username,
+                    avatarModifier = authorAvatarModifier,
+                    onClick = {
+                        onAuthorClick(author.id, author.username, "recipe_${recipe.id}")
+                    },
+                )
+            }
             RecipeMetaSection(recipe = recipe)
             RecipeStepsSection(
                 steps = recipe.steps,

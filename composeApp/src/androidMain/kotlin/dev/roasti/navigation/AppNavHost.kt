@@ -1,5 +1,6 @@
 package dev.roasti.navigation
 
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
@@ -39,6 +40,7 @@ import dev.roasti.ui.features.profile.ProfileRoute
 import dev.roasti.ui.features.settings.SettingsRoute
 import dev.roasti.ui.features.recipepage.RecipeContentRoute
 import dev.roasti.ui.features.recipesteps.RecipeStepsRoute
+import dev.roasti.ui.features.userprofile.UserProfileRoute
 import dev.roasti.ui.screens.FeedRoute
 import dev.roasti.ui.screens.PostComposeRoute
 import dev.roasti.ui.screens.PostDetailRoute
@@ -150,6 +152,11 @@ private fun MainNavHost(
                             onEditPost = { postId ->
                                 navController.navigate(Screen.PostCompose.createRoute(postId))
                             },
+                            onAuthorClick = { userId, username, avatarTag ->
+                                navController.navigate(
+                                    Screen.UserProfile.createRoute(userId, username, avatarTag)
+                                )
+                            },
                             onImageClick = { urls, index ->
                                 navController.navigate(Screen.PhotoViewer.createRoute(urls, index))
                             },
@@ -214,6 +221,11 @@ private fun MainNavHost(
                         onStartBrewing = { startStep ->
                             navController.navigate(Screen.RecipeSteps.createRoute(id, startStep))
                         },
+                        onAuthorClick = { userId, username, avatarTag ->
+                            navController.navigate(
+                                Screen.UserProfile.createRoute(userId, username, avatarTag)
+                            )
+                        },
                     )
                 }
 
@@ -260,6 +272,7 @@ private fun MainNavHost(
                             animationSpec = tween(VerticalSlideDurationMillis),
                         )
                     },
+                    popEnterTransition = { EnterTransition.None }
                 ) { entry ->
                     val id = entry.arguments?.getString(Screen.PostDetail.ARG_ID) ?: return@composable
                     PostDetailRoute(
@@ -267,6 +280,11 @@ private fun MainNavHost(
                         onClose = { navController.popBackStack() },
                         onEditPost = { postId ->
                             navController.navigate(Screen.PostCompose.createRoute(postId))
+                        },
+                        onAuthorClick = { userId, username, avatarTag ->
+                            navController.navigate(
+                                Screen.UserProfile.createRoute(userId, username, avatarTag)
+                            )
                         },
                         onImageClick = { urls, index ->
                             navController.navigate(Screen.PhotoViewer.createRoute(urls, index))
@@ -296,6 +314,34 @@ private fun MainNavHost(
                         images = images,
                         initialIndex = initialIndex,
                         onClose = { navController.popBackStack() },
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        animatedVisibilityScope = this@composable,
+                    )
+                }
+
+                composable(
+                    route = Screen.UserProfile.route,
+                    arguments = listOf(
+                        navArgument(Screen.UserProfile.ARG_USER_ID) { type = NavType.StringType },
+                        navArgument(Screen.UserProfile.ARG_USERNAME) { type = NavType.StringType },
+                        navArgument(Screen.UserProfile.ARG_AVATAR_TAG) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                    ),
+                ) { entry ->
+                    val userId = entry.arguments?.getString(Screen.UserProfile.ARG_USER_ID)
+                        ?: return@composable
+                    val username = entry.arguments?.getString(Screen.UserProfile.ARG_USERNAME)
+                        ?: return@composable
+                    val avatarTag = entry.arguments?.getString(Screen.UserProfile.ARG_AVATAR_TAG)
+                    UserProfileRoute(
+                        userId = userId,
+                        username = username,
+                        onBackClick = { navController.popBackStack() },
+                        contentPadding = innerPadding,
+                        avatarTag = avatarTag,
                         sharedTransitionScope = this@SharedTransitionLayout,
                         animatedVisibilityScope = this@composable,
                     )

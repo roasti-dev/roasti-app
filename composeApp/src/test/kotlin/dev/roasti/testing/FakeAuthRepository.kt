@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import dev.roasti.feature.auth.domain.model.AuthState
+import dev.roasti.feature.auth.domain.model.PublicUserProfile
 import dev.roasti.feature.auth.domain.model.User
 import dev.roasti.feature.auth.domain.repository.AuthRepository
 
@@ -26,6 +27,8 @@ class FakeAuthRepository(initialUser: User? = null) : AuthRepository {
     override suspend fun syncProfile(): Result<User> = Result.failure(NotImplementedError())
     override suspend fun updateProfile(imageId: String?, bio: String?, username: String?): Result<User> =
         Result.failure(NotImplementedError())
+
+    override suspend fun getPublicUserProfile(username: String): Result<PublicUserProfile> = Result.failure(NotImplementedError())
 }
 
 fun fakeUser(id: String = "user-1", username: String = "tester"): User =

@@ -16,6 +16,7 @@ import dev.roasti.ui.features.profile.ProfileViewModel
 import dev.roasti.ui.features.recipelist.RecipesListViewModel
 import dev.roasti.ui.features.recipepage.RecipeContentViewModel
 import dev.roasti.ui.features.recipesteps.RecipeStepsViewModel
+import dev.roasti.ui.features.userprofile.UserProfileViewModel
 
 val viewModelsModule = module {
     viewModel { AppNavigationViewModel(get()) }
@@ -38,4 +39,5 @@ val viewModelsModule = module {
     viewModel { CreateRecipeScreenViewModel(get(), get()) }
     viewModel { params -> EditRecipeViewModel(params.get(), get(), get()) }
     viewModel { FavoritesViewModel(get(), get()) }
+    viewModel { params -> UserProfileViewModel(params.get(), params.get(), get()) }
 }

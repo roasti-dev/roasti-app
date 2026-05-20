@@ -30,10 +30,12 @@ fun CommentItem(
     postedAt: Instant?,
     body: String,
     modifier: Modifier = Modifier,
+    avatarModifier: Modifier = Modifier,
     isOwn: Boolean = false,
     showReply: Boolean = false,
     onMoreClick: (() -> Unit)? = null,
     onReplyClick: (() -> Unit)? = null,
+    onAuthorClick: (() -> Unit)? = null,
 ) {
     val displayName = if (isDeleted || authorName == null) {
         stringResource(R.string.comments_deleted_placeholder)
@@ -57,6 +59,8 @@ fun CommentItem(
                 name = displayName,
                 postedAt = postedAt,
                 modifier = Modifier.weight(1f),
+                avatarModifier = avatarModifier,
+                onClick = if (isDeleted) null else onAuthorClick,
             )
             if (isOwn && !isDeleted && onMoreClick != null) {
                 IconButton(

@@ -53,8 +53,10 @@ fun PostCard(
     onCommentsClick: () -> Unit = {},
     onShareClick: () -> Unit = {},
     onOwnerOptionsClick: () -> Unit = {},
+    onAuthorClick: (() -> Unit)? = null,
     onImageClick: () -> Unit = {},
     imageModifier: Modifier = Modifier,
+    avatarModifier: Modifier = Modifier,
 ) {
     val ratingHandler = onRatingChange
     val commentsHandler = onCommentsClick
@@ -83,6 +85,8 @@ fun PostCard(
                 name = authorName,
                 postedAt = postedAt,
                 modifier = Modifier.weight(1f),
+                avatarModifier = avatarModifier,
+                onClick = onAuthorClick,
             )
             if (isOwn) {
                 IconButton(

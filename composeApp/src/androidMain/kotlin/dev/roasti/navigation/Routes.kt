@@ -28,6 +28,20 @@ sealed class Screen(val route: String) {
 
     object Settings : Screen("settings")
 
+    object UserProfile : Screen("user/{userId}/{username}?avatarTag={avatarTag}") {
+        const val ARG_USER_ID = "userId"
+        const val ARG_USERNAME = "username"
+        const val ARG_AVATAR_TAG = "avatarTag"
+        fun createRoute(userId: String, username: String, avatarTag: String? = null): String {
+            val base = "user/$userId/${android.net.Uri.encode(username)}"
+            return if (avatarTag != null) {
+                "$base?avatarTag=${android.net.Uri.encode(avatarTag)}"
+            } else {
+                base
+            }
+        }
+    }
+
     object PostDetail : Screen("post/{id}") {
         const val ARG_ID = "id"
         fun createRoute(id: String) = "post/$id"

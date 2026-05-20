@@ -1,17 +1,15 @@
 package dev.roasti.feature.auth.data.network
 
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.get
-import io.ktor.client.request.patch
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
 import dev.roasti.core.network.ApiRoutes
 import dev.roasti.core.network.AuthorizedRequestExecutor
 import dev.roasti.feature.auth.data.network.model.request.UpdateProfileRequest
 import dev.roasti.feature.auth.data.network.model.response.PublicUserDto
 import dev.roasti.feature.auth.data.network.model.response.UserDto
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.request.get
+import io.ktor.client.request.patch
+import io.ktor.client.request.setBody
 
 interface ProfileApiClient {
     suspend fun getMyProfile(): Result<UserDto>
@@ -32,16 +30,13 @@ class ProfileApiClientImpl(
     override suspend fun updateProfile(updateBody: UpdateProfileRequest) =
         authorizedRequestExecutor.execute {
             httpClient.patch(ApiRoutes.users.me) {
-                contentType(ContentType.Application.Json)
                 setBody(updateBody)
             }.body<UserDto>()
         }
 
     override suspend fun getUserProfile(username: String): Result<PublicUserDto> {
         return authorizedRequestExecutor.execute {
-            httpClient.patch(ApiRoutes.users.byUsername(username)) {
-                contentType(ContentType.Application.Json)
-            }.body<PublicUserDto>()
+            httpClient.get(ApiRoutes.users.byUsername(username)).body<PublicUserDto>()
         }
     }
 }

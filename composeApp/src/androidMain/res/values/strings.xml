@@ -134,6 +134,9 @@
     <string name="post_delete_confirm_action">Delete</string>
     <string name="post_create_fab_label">Create post</string>
 
+    <!-- User profile -->
+    <string name="user_profile_username_format">\@%1$s</string>
+
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_language">Language</string>

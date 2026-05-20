@@ -70,6 +70,7 @@ fun FeedScreen(
     onPostClick: (String) -> Unit,
     onCreatePost: () -> Unit,
     onEditPost: (String) -> Unit,
+    onAuthorClick: (userId: String, username: String, avatarTag: String?) -> Unit,
     onImageClick: (List<String>, Int) -> Unit,
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -192,6 +193,7 @@ fun FeedScreen(
                 },
                 onRatingChange = viewModel::onRatingChange,
                 onPostClick = onPostClick,
+                onAuthorClick = onAuthorClick,
                 onImageClick = onImageClick,
                 onOwnerOptionsClick = { post -> ownerActionsFor = post.id },
                 topInset = innerPadding.calculateTopPadding(),
@@ -269,6 +271,7 @@ private fun FeedContent(
     onRefresh: () -> Unit,
     onRatingChange: (PostUiModel, PostUserReaction) -> Unit,
     onPostClick: (String) -> Unit,
+    onAuthorClick: (userId: String, username: String, avatarTag: String?) -> Unit,
     onImageClick: (List<String>, Int) -> Unit,
     onOwnerOptionsClick: (PostUiModel) -> Unit,
     topInset: androidx.compose.ui.unit.Dp,
@@ -298,6 +301,7 @@ private fun FeedContent(
                 key = { index -> posts[index]?.id ?: "post_$index" },
             ) { index ->
                 val post = posts[index] ?: return@items
+                val avatarTag = "feed_post_${post.id}"
                 PostCard(
                     authorImageUrl = post.authorImageUrl,
                     authorName = post.authorName,
@@ -312,6 +316,7 @@ private fun FeedContent(
                     onClick = { onPostClick(post.id) },
                     onCommentsClick = { onPostClick(post.id) },
                     onOwnerOptionsClick = { onOwnerOptionsClick(post) },
+                    onAuthorClick = { onAuthorClick(post.authorId, post.authorName, avatarTag) },
                     onImageClick = {
                         post.postImageUrl?.let { url -> onImageClick(listOf(url), 0) }
                     },
@@ -322,6 +327,11 @@ private fun FeedContent(
                             animatedVisibilityScope = animatedVisibilityScope,
                         )
                     } ?: Modifier,
+                    avatarModifier = dev.roasti.ui.util.userAvatarSharedElementModifier(
+                        tag = avatarTag,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope,
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .then(

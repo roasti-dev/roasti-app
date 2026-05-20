@@ -135,6 +135,9 @@
     <string name="post_delete_confirm_action">Удалить</string>
     <string name="post_create_fab_label">Создать пост</string>
 
+    <!-- User profile -->
+    <string name="user_profile_username_format">\@%1$s</string>
+
     <!-- Settings -->
     <string name="settings_title">Настройки</string>
     <string name="settings_language">Язык</string>

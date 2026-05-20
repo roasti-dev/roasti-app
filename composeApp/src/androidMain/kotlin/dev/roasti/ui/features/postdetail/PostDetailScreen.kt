@@ -71,6 +71,8 @@ import dev.roasti.ui.util.postCardSharedBoundsModifier
 interface CommentInteractionListener {
     fun onMoreClick(comment: CommentUiModel)
     fun onReplyClick(comment: CommentUiModel)
+    fun onAuthorClick(comment: CommentUiModel)
+    fun avatarTag(comment: CommentUiModel): String
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
@@ -79,6 +81,7 @@ fun PostDetailScreen(
     postId: String,
     onClose: () -> Unit,
     onEditPost: (String) -> Unit,
+    onAuthorClick: (userId: String, username: String, avatarTag: String?) -> Unit,
     onImageClick: (List<String>, Int) -> Unit,
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -115,10 +118,17 @@ fun PostDetailScreen(
         }
     }
 
-    val commentListener = remember(viewModel) {
+    val commentListener = remember(viewModel, onAuthorClick) {
         object : CommentInteractionListener {
             override fun onMoreClick(comment: CommentUiModel) { commentSheetForId = comment.id }
             override fun onReplyClick(comment: CommentUiModel) { viewModel.onStartReply(comment) }
+            override fun onAuthorClick(comment: CommentUiModel) {
+                val authorId = comment.authorId ?: return
+                val authorName = comment.authorName ?: return
+                onAuthorClick(authorId, authorName, avatarTag(comment))
+            }
+            override fun avatarTag(comment: CommentUiModel): String =
+                "detail_comment_${comment.id}"
         }
     }
 
@@ -181,6 +191,7 @@ fun PostDetailScreen(
                 topInset = innerPadding.calculateTopPadding(),
                 bottomInset = innerPadding.calculateBottomPadding(),
                 onRatingChange = viewModel::onRatingChange,
+                onAuthorClick = onAuthorClick,
                 onImageClick = onImageClick,
                 commentListener = commentListener,
                 sharedTransitionScope = sharedTransitionScope,
@@ -294,12 +305,14 @@ private fun PostDetailContent(
     topInset: androidx.compose.ui.unit.Dp,
     bottomInset: androidx.compose.ui.unit.Dp,
     onRatingChange: (dev.roasti.ui.uikit.post.PostUserReaction) -> Unit,
+    onAuthorClick: (userId: String, username: String, avatarTag: String?) -> Unit,
     onImageClick: (List<String>, Int) -> Unit,
     commentListener: CommentInteractionListener,
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
     modifier: Modifier = Modifier,
 ) {
+    val postAvatarTag = "detail_post_${post.id}"
     val refreshState = comments.loadState.refresh
     val appendState = comments.loadState.append
 
@@ -320,6 +333,7 @@ private fun PostDetailContent(
                 commentsCount = post.commentsCount,
                 isExpanded = true,
                 onRatingChange = onRatingChange,
+                onAuthorClick = { onAuthorClick(post.authorId, post.authorName, postAvatarTag) },
                 onImageClick = {
                     post.postImageUrl?.let { url -> onImageClick(listOf(url), 0) }
                 },
@@ -330,6 +344,11 @@ private fun PostDetailContent(
                         animatedVisibilityScope = animatedVisibilityScope,
                     )
                 } ?: Modifier,
+                avatarModifier = dev.roasti.ui.util.userAvatarSharedElementModifier(
+                    tag = postAvatarTag,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(
@@ -371,6 +390,8 @@ private fun PostDetailContent(
             CommentThreadBlock(
                 thread = thread,
                 listener = commentListener,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = Spacing.lg),
@@ -443,11 +464,14 @@ private fun PostDetailContent(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun CommentThreadBlock(
     thread: CommentThreadUiModel,
     listener: CommentInteractionListener,
     modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     Column(modifier = modifier.padding(vertical = Spacing.xs)) {
         CommentItem(
@@ -458,20 +482,34 @@ private fun CommentThreadBlock(
             body = thread.root.body,
             isOwn = thread.root.isOwn,
             showReply = true,
+            avatarModifier = dev.roasti.ui.util.userAvatarSharedElementModifier(
+                tag = listener.avatarTag(thread.root),
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+            ),
             onMoreClick = { listener.onMoreClick(thread.root) },
             onReplyClick = { listener.onReplyClick(thread.root) },
+            onAuthorClick = { listener.onAuthorClick(thread.root) },
         )
         thread.replies.forEach { reply ->
-            ReplyRow(reply = reply, listener = listener)
+            ReplyRow(
+                reply = reply,
+                listener = listener,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+            )
         }
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun ReplyRow(
     reply: CommentUiModel,
     listener: CommentInteractionListener,
     modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     Row(
         modifier = modifier
@@ -493,7 +531,13 @@ private fun ReplyRow(
             body = reply.body,
             isOwn = reply.isOwn,
             showReply = false,
+            avatarModifier = dev.roasti.ui.util.userAvatarSharedElementModifier(
+                tag = listener.avatarTag(reply),
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+            ),
             onMoreClick = { listener.onMoreClick(reply) },
+            onAuthorClick = { listener.onAuthorClick(reply) },
         )
     }
 }
