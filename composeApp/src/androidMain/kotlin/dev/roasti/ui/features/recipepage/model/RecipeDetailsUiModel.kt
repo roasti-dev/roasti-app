@@ -20,6 +20,8 @@ data class RecipeDetailsUiModel(
     val author: RecipeAuthorUiModel? = null,
     val origin: RecipeOriginUiModel? = null,
     val isPublic: Boolean? = null,
+    val totalDurationSeconds: Int? = null,
+    val isOwner: Boolean = false,
 )
 
 data class RecipeStepUiModel(

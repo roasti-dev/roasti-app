@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import dev.roasti.feature.auth.domain.repository.AuthRepository
 import dev.roasti.feature.recipe.domain.RecipeRepository
 import dev.roasti.ui.features.recipepage.mapper.toUiModel
 import dev.roasti.ui.features.recipepage.model.RecipeDetailsUiModel
@@ -22,6 +23,7 @@ import dev.roasti.ui.uikit.state.UiEvent
 class RecipeContentViewModel(
     private val recipeId: String,
     private val repository: RecipeRepository,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
 
     private val refreshStatus = MutableStateFlow<RefreshStatus>(RefreshStatus.Idle)
@@ -34,9 +36,10 @@ class RecipeContentViewModel(
 
     val state: StateFlow<ContentUiState<RecipeDetailsUiModel>> = combine(
         repository.observeById(recipeId),
+        authRepository.getUser(),
         refreshStatus,
-    ) { cache, status ->
-        val cacheUi = cache?.toUiModel()
+    ) { cache, currentUser, status ->
+        val cacheUi = cache?.toUiModel(currentUserId = currentUser?.id)
         when {
             cacheUi != null -> ContentUiState.Content(
                 data = cacheUi,

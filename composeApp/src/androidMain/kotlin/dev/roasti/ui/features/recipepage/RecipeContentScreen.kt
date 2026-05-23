@@ -3,12 +3,11 @@ package dev.roasti.ui.features.recipepage
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -33,30 +32,25 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.ArrowLeft
-import com.adamglin.phosphoricons.regular.Pencil
-import com.adamglin.phosphoricons.regular.Trash
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -70,23 +64,21 @@ import dev.roasti.ui.theme.Spacing
 import dev.roasti.ui.uikit.ActionButtonPrimary
 import dev.roasti.ui.uikit.AppIcons
 import dev.roasti.ui.uikit.AsyncImagePreviewProvider
-import dev.roasti.ui.uikit.AuthorRow
+import dev.roasti.ui.uikit.AuthorSubtitle
+import dev.roasti.ui.uikit.OverflowMenuItem
+import dev.roasti.ui.uikit.SectionHeader
+import dev.roasti.ui.uikit.TopBarOverflowMenu
+import dev.roasti.ui.uikit.metric.MetricEntry
+import dev.roasti.ui.uikit.metric.MetricsGrid
 import dev.roasti.ui.uikit.state.ContentScaffold
-import dev.roasti.ui.util.recipeImageSharedElementModifier
+import dev.roasti.ui.uikit.timeline.TimelineItem
 import dev.roasti.ui.util.userAvatarSharedElementModifier
+import com.adamglin.phosphoricons.Regular
+import com.adamglin.phosphoricons.regular.ArrowLeft
 
-private val HeaderHeight = 260.dp
-private val HeaderOverlap = 40.dp
-private val MetaChipShape = RoundedCornerShape(18.dp)
+private val StickyTitleThresholdDp = 80.dp
 private val StepNumberSize = 28.dp
 private val StepDurationShape = RoundedCornerShape(10.dp)
-private val ContentShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-
-private data class RecipeMetaItem(
-    val title: String,
-    val value: String,
-    val isHighlighted: Boolean = false,
-)
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -99,18 +91,18 @@ fun RecipeContentRoute(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
-
     val viewModel: RecipeContentViewModel = koinViewModel(parameters = { parametersOf(id) })
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showRemoveDialogConfirmation: Boolean by remember { mutableStateOf(false) }
 
     if (showRemoveDialogConfirmation) {
-        RemoveConfirmationDialog(onConfirmRemove = {
-            viewModel.onRemoveRecipe()
-            showRemoveDialogConfirmation = false
-        }, onDismiss = {
-            showRemoveDialogConfirmation = false
-        })
+        RemoveConfirmationDialog(
+            onConfirmRemove = {
+                viewModel.onRemoveRecipe()
+                showRemoveDialogConfirmation = false
+            },
+            onDismiss = { showRemoveDialogConfirmation = false },
+        )
     }
 
     LaunchedEffect(Unit) {
@@ -153,6 +145,12 @@ private fun RecipeContentBody(
     onStepClick: (stepIndex: Int) -> Unit = {},
     onAuthorClick: (userId: String, username: String, avatarTag: String?) -> Unit = { _, _, _ -> },
 ) {
+    val scrollState = rememberScrollState()
+    val thresholdPx = with(LocalDensity.current) { StickyTitleThresholdDp.toPx() }
+    val showStickyTitle by remember(thresholdPx) {
+        derivedStateOf { scrollState.value > thresholdPx }
+    }
+
     val stepModifiers = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
         recipe.steps.indices.map { index ->
             with(sharedTransitionScope) {
@@ -164,9 +162,28 @@ private fun RecipeContentBody(
         }
     } else emptyList()
 
+    val authorAvatarModifier = userAvatarSharedElementModifier(
+        tag = if (recipe.author != null) "recipe_${recipe.id}" else null,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope,
+    )
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0),
+        topBar = {
+            RecipeTopBar(
+                title = recipe.title,
+                isLiked = recipe.isLiked,
+                likesCount = recipe.likesCount,
+                showOverflowMenu = recipe.isOwner,
+                showStickyTitle = showStickyTitle,
+                onBackClick = onBackClick,
+                onLikeClick = onLikeClick,
+                onEditClick = onEditClick,
+                onRemoveClick = onRemoveClick,
+            )
+        },
         bottomBar = {
             RecipeBottomBar(
                 enabled = recipe.steps.isNotEmpty(),
@@ -174,286 +191,196 @@ private fun RecipeContentBody(
             )
         },
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            RecipeHeaderImage(
-                imageUrl = recipe.imageUrl,
-                imageModifier = recipeImageSharedElementModifier(
-                    recipeId = recipe.id,
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedVisibilityScope = animatedVisibilityScope,
-                ),
-            )
-            val authorAvatarModifier = userAvatarSharedElementModifier(
-                tag = if (recipe.author != null) "recipe_${recipe.id}" else null,
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope,
-            )
-            RecipeContentList(
-                recipe = recipe,
-                stepModifiers = stepModifiers,
-                onLikeClick = onLikeClick,
-                onAuthorClick = onAuthorClick,
-                authorAvatarModifier = authorAvatarModifier,
-                bottomContentPadding = innerPadding.calculateBottomPadding(),
-                modifier = Modifier.fillMaxSize(),
-            )
-            RecipeTopBar(
-                onBackClick = onBackClick,
-                onEditClick = onEditClick,
-                onRemoveClick = onRemoveClick,
-                modifier = Modifier.align(Alignment.TopCenter),
-            )
-        }
-    }
-}
-
-@Composable
-private fun RecipeHeaderImage(
-    imageUrl: String?,
-    modifier: Modifier = Modifier,
-    imageModifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(HeaderHeight)
-    ) {
-        AsyncImage(
-            model = imageUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = imageModifier.fillMaxSize(),
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.background.copy(alpha = 0.04f),
-                            MaterialTheme.colorScheme.background.copy(alpha = 0.16f),
-                            MaterialTheme.colorScheme.background.copy(alpha = 0.4f),
-                        )
-                    )
-                )
-        )
-    }
-}
-
-@Composable
-private fun RecipeContentList(
-    recipe: RecipeDetailsUiModel,
-    stepModifiers: List<Modifier> = emptyList(),
-    onLikeClick: () -> Unit = {},
-    onAuthorClick: (userId: String, username: String, avatarTag: String?) -> Unit = { _, _, _ -> },
-    authorAvatarModifier: Modifier = Modifier,
-    bottomContentPadding: Dp = 0.dp,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .verticalScroll(rememberScrollState())
-            .padding(top = HeaderHeight - HeaderOverlap, bottom = Spacing.xxxl + bottomContentPadding),
-    ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .clip(ContentShape)
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = Spacing.xxl, vertical = Spacing.xxl),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+                .fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding())
+                .verticalScroll(scrollState),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = recipe.title,
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f),
-                )
-
-                LikeButton(
-                    isLiked = recipe.isLiked,
-                    likesCount = recipe.likesCount,
-                    onClick = onLikeClick,
-                )
-            }
-            Text(
-                text = recipe.description,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+            RecipeHeaderSection(
+                recipe = recipe,
+                authorAvatarModifier = authorAvatarModifier,
+                onAuthorClick = onAuthorClick,
             )
-            recipe.author?.let { author ->
-                AuthorRow(
-                    imageUrl = author.avatarId?.let { imageUrl(it) },
-                    name = author.username,
-                    avatarModifier = authorAvatarModifier,
-                    onClick = {
-                        onAuthorClick(author.id, author.username, "recipe_${recipe.id}")
-                    },
-                )
-            }
-            RecipeMetaSection(recipe = recipe)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            RecipeMetricsSection(recipe = recipe)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             RecipeStepsSection(
                 steps = recipe.steps,
                 stepModifiers = stepModifiers,
             )
+            Spacer(Modifier.height(Spacing.xxxl + innerPadding.calculateBottomPadding()))
         }
     }
 }
 
 @Composable
 private fun RecipeTopBar(
+    title: String,
+    isLiked: Boolean,
+    likesCount: Int,
+    showOverflowMenu: Boolean,
+    showStickyTitle: Boolean,
     onBackClick: () -> Unit,
+    onLikeClick: () -> Unit,
     onEditClick: () -> Unit,
     onRemoveClick: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
+    val background = MaterialTheme.colorScheme.background
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
+            .background(if (showStickyTitle) background else background.copy(alpha = 0f))
             .statusBarsPadding()
-            .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
+            .padding(horizontal = Spacing.xs, vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-
-        ActionButton(
-            image = AppIcons.Regular.ArrowLeft,
-            onClick = onBackClick,
-            contentDescription = stringResource(R.string.back_label)
+        IconButton(onClick = onBackClick) {
+            Icon(
+                imageVector = AppIcons.Regular.ArrowLeft,
+                contentDescription = stringResource(R.string.back_label),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        val stickyTitleAlpha by animateFloatAsState(
+            targetValue = if (showStickyTitle) 1f else 0f,
+            label = "stickyTitleAlpha",
         )
-        Spacer(Modifier.weight(1f))
-        ActionButton(
-            image = AppIcons.Regular.Pencil,
-            onClick = onEditClick,
-            contentDescription = stringResource(R.string.recipe_edit),
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .alpha(stickyTitleAlpha)
+                    .padding(horizontal = Spacing.sm),
+            )
+        }
+        LikeButton(
+            isLiked = isLiked,
+            likesCount = likesCount,
+            onClick = onLikeClick,
+            modifier = Modifier.padding(end = Spacing.sm),
         )
-
-        ActionButton(
-            image = AppIcons.Regular.Trash,
-            onClick = onRemoveClick,
-            contentDescription = stringResource(R.string.recipe_remove),
-        )
+        if (showOverflowMenu) {
+            TopBarOverflowMenu(
+                items = listOf(
+                    OverflowMenuItem(
+                        label = stringResource(R.string.recipe_edit),
+                        onClick = onEditClick,
+                    ),
+                    OverflowMenuItem(
+                        label = stringResource(R.string.recipe_remove),
+                        onClick = onRemoveClick,
+                        isDestructive = true,
+                    ),
+                ),
+                contentDescription = stringResource(R.string.recipe_owner_menu_more),
+            )
+        }
     }
 }
 
 @Composable
-private fun ActionButton(
-    image: ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    contentDescription: String? = null,
-    tint: Color = MaterialTheme.colorScheme.tertiary
-) {
-    IconButton(onClick, modifier) {
-        Icon(
-            imageVector = image,
-            contentDescription = contentDescription,
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(8.dp),
-            tint = tint
-        )
-    }
-}
-
-@Composable
-private fun RecipeMetaSection(
+private fun RecipeHeaderSection(
     recipe: RecipeDetailsUiModel,
+    authorAvatarModifier: Modifier = Modifier,
+    onAuthorClick: (userId: String, username: String, avatarTag: String?) -> Unit = { _, _, _ -> },
 ) {
-    val items = buildList {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Text(
+            text = recipe.title,
+            style = MaterialTheme.typography.displayMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        recipe.author?.let { author ->
+            AuthorSubtitle(
+                imageUrl = author.avatarId?.let { imageUrl(it) },
+                name = author.username,
+                avatarModifier = authorAvatarModifier,
+                onClick = {
+                    onAuthorClick(author.id, author.username, "recipe_${recipe.id}")
+                },
+            )
+        }
+        Spacer(Modifier.height(Spacing.xs))
+        Text(
+            text = recipe.description,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun RecipeMetricsSection(recipe: RecipeDetailsUiModel) {
+    val brewMethodIcon = painterResource(R.drawable.ic_coffee)
+    val timeIcon = painterResource(R.drawable.ic_clock)
+    val difficultyIcon = painterResource(R.drawable.ic_bar_chart)
+    val beansIcon = painterResource(R.drawable.ic_coffee_bean)
+    val roastIcon = painterResource(R.drawable.ic_flame)
+
+    val main = buildList {
         add(
-            RecipeMetaItem(
-                title = stringResource(R.string.recipe_brew_method),
+            MetricEntry(
+                icon = brewMethodIcon,
+                label = stringResource(R.string.recipe_brew_method),
                 value = stringResource(recipe.brewMethodLabelRes),
-                isHighlighted = true,
             )
         )
+        recipe.totalDurationSeconds?.let { totalSeconds ->
+            add(
+                MetricEntry(
+                    icon = timeIcon,
+                    label = stringResource(R.string.recipe_time),
+                    value = formatTotalDuration(totalSeconds),
+                )
+            )
+        }
+    }
+    val others = buildList {
         add(
-            RecipeMetaItem(
-                title = stringResource(R.string.recipe_difficulty),
+            MetricEntry(
+                icon = difficultyIcon,
+                label = stringResource(R.string.recipe_difficulty),
                 value = stringResource(recipe.difficultyLabelRes),
             )
         )
         recipe.beans?.takeIf { it.isNotBlank() }?.let { beans ->
             add(
-                RecipeMetaItem(
-                    title = stringResource(R.string.recipe_beans),
+                MetricEntry(
+                    icon = beansIcon,
+                    label = stringResource(R.string.recipe_beans),
                     value = beans,
                 )
             )
         }
-        recipe.roastLevelLabelRes?.let { roastLevelLabelRes ->
+        recipe.roastLevelLabelRes?.let { res ->
             add(
-                RecipeMetaItem(
-                    title = stringResource(R.string.recipe_roast_level),
-                    value = stringResource(roastLevelLabelRes),
+                MetricEntry(
+                    icon = roastIcon,
+                    label = stringResource(R.string.recipe_roast_level),
+                    value = stringResource(res),
                 )
             )
         }
     }
 
-    RecipeMetaChips(items = items)
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun RecipeMetaChips(
-    items: List<RecipeMetaItem>,
-) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        items.forEach { item ->
-            RecipeMetaChip(item = item)
-        }
-    }
-}
-
-@Composable
-private fun RecipeMetaChip(
-    item: RecipeMetaItem,
-) {
-    val backgroundColor = if (item.isHighlighted) {
-        MaterialTheme.colorScheme.tertiaryContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceContainer
-    }
-    val titleColor = if (item.isHighlighted) {
-        MaterialTheme.colorScheme.tertiary
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    Column(
-        modifier = Modifier
-            .clip(MetaChipShape)
-            .background(backgroundColor)
-            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-    ) {
-        Text(
-            text = item.title,
-            style = MaterialTheme.typography.labelSmall,
-            color = titleColor,
-        )
-        Text(
-            text = item.value,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    }
+    MetricsGrid(
+        main = main,
+        others = others,
+        modifier = Modifier.padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
+    )
 }
 
 @Composable
@@ -461,79 +388,60 @@ private fun RecipeStepsSection(
     steps: List<RecipeStepUiModel>,
     stepModifiers: List<Modifier> = emptyList(),
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-        Text(
-            text = stringResource(R.string.recipe_brewing_steps),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+    Column(
+        modifier = Modifier.padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
+        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+    ) {
+        SectionHeader(text = stringResource(R.string.recipe_brewing_steps))
         Column {
             steps.forEachIndexed { index, step ->
-                BrewStepItem(
-                    step = step,
-                    stepNumber = index + 1,
+                TimelineItem(
+                    isLast = index == steps.lastIndex,
                     modifier = stepModifiers.getOrElse(index) { Modifier },
+                    leading = {
+                        Box(
+                            modifier = Modifier
+                                .size(StepNumberSize)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = (index + 1).toString(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    },
+                    content = {
+                        StepContent(step = step)
+                    },
                 )
-                if (index != steps.lastIndex) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = StepNumberSize + Spacing.md),
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
-                }
             }
         }
     }
 }
 
 @Composable
-private fun BrewStepItem(
-    step: RecipeStepUiModel,
-    stepNumber: Int,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = Spacing.md),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-        verticalAlignment = Alignment.Top,
+private fun StepContent(step: RecipeStepUiModel) {
+    Column(
+        modifier = Modifier.padding(bottom = Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Box(
-            modifier = Modifier
-                .size(StepNumberSize)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stepNumber.toString(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-        }
-        Row(
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top,
-        ) {
-            Text(
-                text = step.title,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-            )
-            step.durationSeconds?.let { duration ->
-                StepDurationChip(duration = formatStepDuration(duration))
-            }
+        Text(
+            text = step.title,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        step.durationSeconds?.let { duration ->
+            StepDurationChip(duration = formatStepDuration(duration))
         }
     }
 }
 
 @Composable
-private fun StepDurationChip(
-    duration: String,
-) {
+private fun StepDurationChip(duration: String) {
     Box(
         modifier = Modifier
             .clip(StepDurationShape)
@@ -579,7 +487,7 @@ private fun RecipeBottomBar(
                     end = Spacing.xxl,
                     bottom = Spacing.lg,
                 ),
-            enabled = enabled
+            enabled = enabled,
         )
     }
 }
@@ -592,7 +500,7 @@ private fun RemoveConfirmationDialog(onConfirmRemove: () -> Unit, onDismiss: () 
         confirmButton = {
             TextButton(onClick = onConfirmRemove) {
                 Text(
-                    text = stringResource(R.string.dialog_confirm_title),
+                    text = stringResource(R.string.dialog_remove_label),
                     color = MaterialTheme.colorScheme.error,
                 )
             }
@@ -603,6 +511,23 @@ private fun RemoveConfirmationDialog(onConfirmRemove: () -> Unit, onDismiss: () 
             }
         },
     )
+}
+
+@Composable
+private fun formatTotalDuration(totalSeconds: Int): String {
+    val totalMinutes = totalSeconds / 60
+    val days = totalMinutes / (60 * 24)
+    val hours = (totalMinutes % (60 * 24)) / 60
+    val minutes = totalMinutes % 60
+    return when {
+        days > 0 && hours > 0 -> stringResource(R.string.recipe_duration_day, days) +
+            " " + stringResource(R.string.recipe_duration_hour, hours)
+        days > 0 -> stringResource(R.string.recipe_duration_day, days)
+        hours > 0 && minutes > 0 -> stringResource(R.string.recipe_duration_hour, hours) +
+            " " + stringResource(R.string.recipe_duration_min, minutes)
+        hours > 0 -> stringResource(R.string.recipe_duration_hour, hours)
+        else -> stringResource(R.string.recipe_duration_min, minutes.coerceAtLeast(0))
+    }
 }
 
 private fun formatStepDuration(totalSeconds: Int): String {
@@ -618,55 +543,57 @@ private fun RecipeContentScreenPreview() {
         AsyncImagePreviewProvider {
             RecipeContentBody(
                 recipe = RecipeDetailsUiModel(
-                        id = "aeropress-inverted",
-                        title = "Aeropress Inverted",
-                        description = "Clean and sweet cup with balanced acidity and a compact recipe flow that stays readable even with multiple brewing steps.",
-                        imageUrl = null,
-                        brewMethodLabelRes = R.string.recipe_brew_method_aeropress,
-                        difficultyLabelRes = R.string.recipe_difficulty_medium,
-                        roastLevelLabelRes = R.string.recipe_roast_level_medium,
-                        beans = "Colombian Supremo",
-                        isLiked = true,
-                        likesCount = 42,
-                        steps = listOf(
-                            RecipeStepUiModel(
-                                order = 1,
-                                title = "Setup Inverted",
-                                description = "Assemble the Aeropress in inverted position with the plunger seated securely.",
-                                durationSeconds = 30,
-                            ),
-                            RecipeStepUiModel(
-                                order = 2,
-                                title = "Add Coffee",
-                                description = "Add 17 g of medium-fine ground coffee and level the bed.",
-                                durationSeconds = 15,
-                            ),
-                            RecipeStepUiModel(
-                                order = 3,
-                                title = "First Pour",
-                                description = "Pour in hot water to half volume and make sure all grounds are saturated.",
-                                durationSeconds = 30,
-                            ),
-                            RecipeStepUiModel(
-                                order = 4,
-                                title = "Stir",
-                                description = "Stir gently for a few seconds to break crust and improve extraction.",
-                                durationSeconds = 10,
-                            ),
-                            RecipeStepUiModel(
-                                order = 5,
-                                title = "Top Up",
-                                description = "Add the remaining water, attach the filter cap, and wait briefly.",
-                                durationSeconds = 35,
-                            ),
-                            RecipeStepUiModel(
-                                order = 6,
-                                title = "Flip And Press",
-                                description = "Carefully flip onto the cup and press slowly until you hear a hiss.",
-                                durationSeconds = 60,
-                            ),
+                    id = "aeropress-inverted",
+                    title = "Aeropress Inverted",
+                    description = "Clean and sweet cup with balanced acidity and a compact recipe flow that stays readable even with multiple brewing steps.",
+                    imageUrl = null,
+                    brewMethodLabelRes = R.string.recipe_brew_method_aeropress,
+                    difficultyLabelRes = R.string.recipe_difficulty_medium,
+                    roastLevelLabelRes = R.string.recipe_roast_level_medium,
+                    beans = "Colombian Supremo",
+                    isLiked = true,
+                    likesCount = 42,
+                    totalDurationSeconds = 180,
+                    isOwner = true,
+                    steps = listOf(
+                        RecipeStepUiModel(
+                            order = 1,
+                            title = "Setup Inverted",
+                            description = "Assemble the Aeropress in inverted position with the plunger seated securely.",
+                            durationSeconds = 30,
                         ),
-                    )
+                        RecipeStepUiModel(
+                            order = 2,
+                            title = "Add Coffee",
+                            description = "Add 17 g of medium-fine ground coffee and level the bed.",
+                            durationSeconds = 15,
+                        ),
+                        RecipeStepUiModel(
+                            order = 3,
+                            title = "First Pour",
+                            description = "Pour in hot water to half volume and make sure all grounds are saturated.",
+                            durationSeconds = 30,
+                        ),
+                        RecipeStepUiModel(
+                            order = 4,
+                            title = "Stir",
+                            description = "Stir gently for a few seconds to break crust and improve extraction.",
+                            durationSeconds = 10,
+                        ),
+                        RecipeStepUiModel(
+                            order = 5,
+                            title = "Top Up",
+                            description = "Add the remaining water, attach the filter cap, and wait briefly.",
+                            durationSeconds = 35,
+                        ),
+                        RecipeStepUiModel(
+                            order = 6,
+                            title = "Flip And Press",
+                            description = "Carefully flip onto the cup and press slowly until you hear a hiss.",
+                            durationSeconds = 60,
+                        ),
+                    ),
+                )
             )
         }
     }

@@ -14,6 +14,11 @@
     <string name="recipe_beans">Зёрна</string>
     <string name="recipe_brewing_steps">Шаги заваривания</string>
     <string name="recipe_roast_level">Обжарка</string>
+    <string name="recipe_time">Время</string>
+    <string name="recipe_duration_min">%1$d мин</string>
+    <string name="recipe_duration_hour">%1$d ч</string>
+    <string name="recipe_duration_day">%1$d д</string>
+    <string name="recipe_owner_menu_more">Ещё</string>
     <string name="recipe_missing_value">Н/Д</string>
     <string name="recipe_list_favorite_section_title">Избранное</string>
     <string name="recipe_list_favorite_empty_state">У вас пока нет избранных</string>

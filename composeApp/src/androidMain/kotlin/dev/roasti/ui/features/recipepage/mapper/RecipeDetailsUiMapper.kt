@@ -9,7 +9,7 @@ import dev.roasti.ui.features.recipepage.model.RecipeDetailsUiModel
 import dev.roasti.ui.features.recipepage.model.RecipeStepUiModel
 import dev.roasti.core.utils.imageUrl
 
-internal fun Recipe.toUiModel() = RecipeDetailsUiModel(
+internal fun Recipe.toUiModel(currentUserId: String?) = RecipeDetailsUiModel(
     id = id,
     title = title,
     description = description,
@@ -25,6 +25,10 @@ internal fun Recipe.toUiModel() = RecipeDetailsUiModel(
     author = author?.toUiModel(),
     origin = origin?.toUiModel(),
     isPublic = isPublic,
+    totalDurationSeconds = steps.mapNotNull { it.durationSeconds }
+        .takeIf { it.isNotEmpty() }
+        ?.sum(),
+    isOwner = currentUserId != null && author?.id == currentUserId,
 )
 
 private fun BrewStep.toUiModel() = RecipeStepUiModel(

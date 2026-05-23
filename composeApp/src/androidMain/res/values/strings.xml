@@ -13,6 +13,11 @@
     <string name="recipe_beans">Beans</string>
     <string name="recipe_brewing_steps">Brewing Steps</string>
     <string name="recipe_roast_level">Roast</string>
+    <string name="recipe_time">Time</string>
+    <string name="recipe_duration_min">%1$d min</string>
+    <string name="recipe_duration_hour">%1$d h</string>
+    <string name="recipe_duration_day">%1$d d</string>
+    <string name="recipe_owner_menu_more">More options</string>
     <string name="recipe_missing_value">N/A</string>
     <string name="recipe_list_favorite_section_title">Favorites</string>
     <string name="recipe_list_favorite_empty_state">You don’t have favorites yet</string>
