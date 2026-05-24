@@ -5,17 +5,12 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,10 +21,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,14 +31,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.roasti.R
 import dev.roasti.feature.recipe.domain.session.BrewingEffect
@@ -59,15 +46,12 @@ import dev.roasti.ui.features.recipesteps.components.CollapsedStepContent
 import dev.roasti.ui.features.recipesteps.components.StepIndicatorBadge
 import dev.roasti.ui.theme.Spacing
 import dev.roasti.ui.uikit.state.ContentScaffold
+import dev.roasti.ui.uikit.timeline.TimelineColumn
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-private val BadgeColumnWidth = 48.dp
-private val ConnectorWidth = 2.dp
 private val NoOpClick: () -> Unit = {}
-private const val ActivationDelayMillis = 400
-private const val ConnectorAnimMillis = 520
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -186,11 +170,7 @@ private fun ActiveSessionContent(
     onCancelAutoAdvance: () -> Unit,
     onAutoAdvanceToggle: (Boolean) -> Unit,
 ) {
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(session.currentStepIndex) {
-        listState.animateScrollToItem(session.currentStepIndex.coerceAtLeast(0))
-    }
+    val expandedIndex = session.rows.firstOrNull { it.isExpanded }?.index
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -215,8 +195,9 @@ private fun ActiveSessionContent(
             )
         },
     ) { innerPadding ->
-        LazyColumn(
-            state = listState,
+        TimelineColumn(
+            activeIndex = session.currentStepIndex,
+            expandedIndex = expandedIndex,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = innerPadding.calculateTopPadding()),
@@ -226,126 +207,40 @@ private fun ActiveSessionContent(
                 bottom = innerPadding.calculateBottomPadding() + Spacing.xl,
                 top = Spacing.sm,
             ),
-            verticalArrangement = Arrangement.spacedBy(0.dp),
-        ) {
-            itemsIndexed(
-                items = session.rows,
-                key = { _, row -> row.index },
-            ) { _, row ->
-                BrewingRow(
-                    row = row,
-                    isLast = row.index == session.rows.lastIndex,
-                    session = session,
-                    onActiveClick = { onToggleExpand(row.index) },
-                    onCancelAutoAdvance = onCancelAutoAdvance,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun BrewingRow(
-    row: BrewingStepRowUiState,
-    isLast: Boolean,
-    session: SessionUiState,
-    onActiveClick: () -> Unit,
-    onCancelAutoAdvance: () -> Unit,
-) {
-    val isActiveExpanded = row.kind == StepRowKind.Active && row.isExpanded
-    val animatedBadgeSize by animateDpAsState(
-        targetValue = if (isActiveExpanded) 40.dp else 28.dp,
-        animationSpec = tween(
-            durationMillis = 320,
-            delayMillis = if (isActiveExpanded) ActivationDelayMillis else 0,
-            easing = FastOutSlowInEasing,
-        ),
-        label = "badge_size",
-    )
-    val fillProgress by animateFloatAsState(
-        targetValue = if (row.kind == StepRowKind.Done) 1f else 0f,
-        animationSpec = tween(
-            durationMillis = ConnectorAnimMillis,
-            easing = FastOutSlowInEasing,
-        ),
-        label = "connector_fill",
-    )
-    val trackColor = MaterialTheme.colorScheme.outlineVariant
-    val fillColor = MaterialTheme.colorScheme.tertiary
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .drawBehind {
-                if (isLast) return@drawBehind
-                val centerX = BadgeColumnWidth.toPx() / 2
-                val startY = Spacing.sm.toPx() + animatedBadgeSize.toPx() + Spacing.xs.toPx()
-                val endY = size.height
-                if (endY <= startY) return@drawBehind
-                val stroke = ConnectorWidth.toPx()
-                drawLine(
-                    color = trackColor,
-                    start = Offset(centerX, startY),
-                    end = Offset(centerX, endY),
-                    strokeWidth = stroke,
-                    cap = StrokeCap.Round,
-                )
-                if (fillProgress > 0f) {
-                    drawLine(
-                        color = fillColor,
-                        start = Offset(centerX, startY),
-                        end = Offset(centerX, startY + (endY - startY) * fillProgress),
-                        strokeWidth = stroke,
-                        cap = StrokeCap.Round,
-                    )
-                }
-            },
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .width(BadgeColumnWidth)
-                .padding(top = Spacing.sm),
-        ) {
-            StepIndicatorBadge(
-                kind = row.kind,
-                number = row.displayNumber,
-                size = animatedBadgeSize,
-            )
-        }
-        AnimatedContent(
-            targetState = isActiveExpanded,
-            modifier = Modifier
-                .weight(1f)
-                .padding(vertical = Spacing.xs),
-            transitionSpec = {
-                (fadeIn(tween(durationMillis = 320)) togetherWith
-                        fadeOut(tween(durationMillis = 180)))
-                    .using(
-                        SizeTransform { _, _ ->
-                            tween(durationMillis = 360, easing = FastOutSlowInEasing)
-                        },
-                    )
-            },
-            label = "step_card_swap",
-        ) { expanded ->
-            if (expanded) {
-                BrewingActiveCard(
-                    title = row.title,
-                    timer = session.timer,
-                    autoAdvanceCountdown = session.autoAdvanceCountdown,
-                    onClick = onActiveClick,
-                    onCancelAutoAdvance = onCancelAutoAdvance,
-                )
-            } else {
-                val onClick: () -> Unit = if (row.kind == StepRowKind.Active) onActiveClick else NoOpClick
-                CollapsedStepContent(
-                    title = row.title,
-                    durationLabel = activeRowRemainingOrDuration(row, session),
+            badge = { _, index, size ->
+                val row = session.rows[index]
+                StepIndicatorBadge(
                     kind = row.kind,
-                    onClick = onClick,
+                    number = row.displayNumber,
+                    size = size,
                 )
-            }
+            },
+        ) {
+            items(
+                items = session.rows,
+                key = { it.index },
+                collapsed = { row ->
+                    val onClick: () -> Unit =
+                        if (row.kind == StepRowKind.Active) {
+                            { onToggleExpand(row.index) }
+                        } else NoOpClick
+                    CollapsedStepContent(
+                        title = row.title,
+                        durationLabel = activeRowRemainingOrDuration(row, session),
+                        kind = row.kind,
+                        onClick = onClick,
+                    )
+                },
+                expanded = { row ->
+                    BrewingActiveCard(
+                        title = row.title,
+                        timer = session.timer,
+                        autoAdvanceCountdown = session.autoAdvanceCountdown,
+                        onClick = { onToggleExpand(row.index) },
+                        onCancelAutoAdvance = onCancelAutoAdvance,
+                    )
+                },
+            )
         }
     }
 }
