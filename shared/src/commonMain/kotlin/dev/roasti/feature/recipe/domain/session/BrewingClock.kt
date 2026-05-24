@@ -7,12 +7,12 @@ import kotlinx.coroutines.isActive
 import kotlin.coroutines.coroutineContext
 import kotlin.time.TimeSource
 
-interface BrewingTimer {
+interface BrewingClock {
     fun nowMillis(): Long
     fun ticker(periodMillis: Long): Flow<Long>
 }
 
-class BrewingTimerImpl : BrewingTimer {
+class BrewingClockImpl : BrewingClock {
     private val originMark = TimeSource.Monotonic.markNow()
 
     override fun nowMillis(): Long = originMark.elapsedNow().inWholeMilliseconds

@@ -71,6 +71,16 @@
     <string name="steps_step_counter">Step %1$d of %2$d</string>
     <string name="steps_brew_ready">Your brew is ready!</string>
     <string name="steps_finish">Finish</string>
+    <string name="steps_finish_brewing">Finish brewing</string>
+    <string name="steps_auto_label">Auto</string>
+    <string name="steps_manual_label">Manual</string>
+    <string name="steps_auto_advancing">Next step in&#8230;</string>
+    <string name="steps_auto_countdown_cancel">Tap to stay</string>
+    <string name="steps_remaining_label">remaining</string>
+    <string name="steps_previous">Previous step</string>
+    <string name="steps_next">Next step</string>
+    <string name="steps_pause">Pause</string>
+    <string name="steps_resume">Resume</string>
 
     <string name="dialog_confirm_title">Confirm action</string>
     <string name="dialog_remove_label">Remove</string>

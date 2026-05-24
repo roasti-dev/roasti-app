@@ -27,6 +27,5 @@ data class RecipeDetailsUiModel(
 data class RecipeStepUiModel(
     val order: Int,
     val title: String,
-    val description: String,
     val durationSeconds: Int?,
 )

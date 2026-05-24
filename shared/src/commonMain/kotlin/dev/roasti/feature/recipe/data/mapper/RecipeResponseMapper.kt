@@ -59,7 +59,6 @@ fun RecipeOriginResponseDto.toDomain(): RecipeOrigin = RecipeOrigin(
 fun RecipeStepResponseDto.toDomain(): BrewStep = BrewStep(
     order = order,
     title = title,
-    description = description,
     durationSeconds = durationSeconds,
     imageId = imageId,
 )

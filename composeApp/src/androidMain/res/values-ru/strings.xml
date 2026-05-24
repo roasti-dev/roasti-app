@@ -72,6 +72,16 @@
     <string name="steps_step_counter">Шаг %1$d из %2$d</string>
     <string name="steps_brew_ready">Ваш напиток готов!</string>
     <string name="steps_finish">Завершить</string>
+    <string name="steps_finish_brewing">Завершить заваривание</string>
+    <string name="steps_auto_label">Авто</string>
+    <string name="steps_manual_label">Вручную</string>
+    <string name="steps_auto_advancing">Следующий шаг через&#8230;</string>
+    <string name="steps_auto_countdown_cancel">Остаться</string>
+    <string name="steps_remaining_label">осталось</string>
+    <string name="steps_previous">Предыдущий шаг</string>
+    <string name="steps_next">Следующий шаг</string>
+    <string name="steps_pause">Пауза</string>
+    <string name="steps_resume">Продолжить</string>
 
     <string name="dialog_confirm_title">Подтвердите действие</string>
     <string name="dialog_remove_label">Удалить</string>

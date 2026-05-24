@@ -1,8 +1,8 @@
-package dev.roasti.ui.features.recipesteps
+package dev.roasti.feature.recipe.domain.session
 
 import kotlin.math.ceil
 
-internal data class StepTimerState(
+data class StepTimerState(
     val totalMillis: Long,
     val remainingMillis: Long,
     val isRunning: Boolean,
@@ -10,6 +10,12 @@ internal data class StepTimerState(
 ) {
     val progress: Float
         get() = if (totalMillis > 0) remainingMillis / totalMillis.toFloat() else 1f
+
+    val remainingSeconds: Int
+        get() = ceil(remainingMillis / MILLIS_IN_SECOND_F).toInt()
+
+    val isCompleted: Boolean
+        get() = totalMillis > 0L && remainingMillis <= 0L
 
     fun advance(nowMillis: Long): StepTimerState {
         if (!isRunning || startedAtMillis == null) return this
@@ -56,29 +62,6 @@ internal data class StepTimerState(
         }
 
         private const val MILLIS_IN_SECOND = 1000L
+        private const val MILLIS_IN_SECOND_F = 1000f
     }
-}
-
-internal data class BrewingStepUiModel(
-    val order: Int,
-    val title: String,
-    val description: String,
-    val durationSeconds: Int?,
-)
-
-internal data class SessionState(
-    val steps: List<BrewingStepUiModel>,
-    val currentStepIndex: Int,
-    val totalSteps: Int,
-    val isFirstStep: Boolean,
-    val isLastStep: Boolean,
-    val isFinished: Boolean,
-    val stepProgress: Float,
-    val timer: StepTimerState,
-) {
-    val currentStep: BrewingStepUiModel get() = steps[currentStepIndex]
-    val hasTimer: Boolean get() = (currentStep.durationSeconds ?: 0) > 0
-    val isTimerRunning: Boolean get() = timer.isRunning
-    val remainingSeconds: Int get() = ceil(timer.remainingMillis / 1000f).toInt()
-    val timerProgress: Float get() = timer.progress
 }

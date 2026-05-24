@@ -34,6 +34,5 @@ internal fun Recipe.toUiModel(currentUserId: String?) = RecipeDetailsUiModel(
 private fun BrewStep.toUiModel() = RecipeStepUiModel(
     order = order,
     title = title,
-    description = description,
     durationSeconds = durationSeconds,
 )

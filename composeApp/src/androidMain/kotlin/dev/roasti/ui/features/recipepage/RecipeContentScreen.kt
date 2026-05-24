@@ -559,37 +559,31 @@ private fun RecipeContentScreenPreview() {
                         RecipeStepUiModel(
                             order = 1,
                             title = "Setup Inverted",
-                            description = "Assemble the Aeropress in inverted position with the plunger seated securely.",
                             durationSeconds = 30,
                         ),
                         RecipeStepUiModel(
                             order = 2,
                             title = "Add Coffee",
-                            description = "Add 17 g of medium-fine ground coffee and level the bed.",
                             durationSeconds = 15,
                         ),
                         RecipeStepUiModel(
                             order = 3,
                             title = "First Pour",
-                            description = "Pour in hot water to half volume and make sure all grounds are saturated.",
                             durationSeconds = 30,
                         ),
                         RecipeStepUiModel(
                             order = 4,
                             title = "Stir",
-                            description = "Stir gently for a few seconds to break crust and improve extraction.",
                             durationSeconds = 10,
                         ),
                         RecipeStepUiModel(
                             order = 5,
                             title = "Top Up",
-                            description = "Add the remaining water, attach the filter cap, and wait briefly.",
                             durationSeconds = 35,
                         ),
                         RecipeStepUiModel(
                             order = 6,
                             title = "Flip And Press",
-                            description = "Carefully flip onto the cup and press slowly until you hear a hiss.",
                             durationSeconds = 60,
                         ),
                     ),

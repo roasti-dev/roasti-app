@@ -20,6 +20,7 @@ import dev.roasti.feature.auth.di.authModule
 import dev.roasti.feature.comment.di.commentModule
 import dev.roasti.feature.likes.di.likesModule
 import dev.roasti.feature.post.di.postModule
+import dev.roasti.feature.preferences.di.preferencesModule
 import dev.roasti.feature.recipe.di.recipeModule
 import dev.roasti.feature.upload.di.uploadModule
 
@@ -39,6 +40,7 @@ class RoastiApplication : Application() {
                 authModule,
                 uploadModule,
                 likesModule,
+                preferencesModule,
                 recipeModule,
                 postModule,
                 commentModule,

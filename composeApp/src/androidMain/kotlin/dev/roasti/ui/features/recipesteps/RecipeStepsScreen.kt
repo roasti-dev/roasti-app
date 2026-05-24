@@ -1,61 +1,73 @@
 package dev.roasti.ui.features.recipesteps
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledIconButton
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
 import dev.roasti.R
-import dev.roasti.ui.theme.ShapeXxl
+import dev.roasti.feature.recipe.domain.session.BrewingEffect
+import dev.roasti.ui.features.recipesteps.components.AutoAdvanceToggle
+import dev.roasti.ui.features.recipesteps.components.BrewingActiveCard
+import dev.roasti.ui.features.recipesteps.components.BrewingCompletionContent
+import dev.roasti.ui.features.recipesteps.components.BrewingControlsDock
+import dev.roasti.ui.features.recipesteps.components.CollapsedStepContent
+import dev.roasti.ui.features.recipesteps.components.StepIndicatorBadge
 import dev.roasti.ui.theme.Spacing
 import dev.roasti.ui.uikit.state.ContentScaffold
+import kotlinx.coroutines.flow.collectLatest
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
-private const val TimerAnimationDurationMillis = 100
+private val BadgeColumnWidth = 48.dp
+private val ConnectorWidth = 2.dp
+private val NoOpClick: () -> Unit = {}
+private const val ActivationDelayMillis = 400
+private const val ConnectorAnimMillis = 520
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -63,16 +75,33 @@ internal fun RecipeStepsRoute(
     id: String,
     startStep: Int = 0,
     onBackClick: () -> Unit = {},
-    sharedTransitionScope: SharedTransitionScope? = null,
-    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    @Suppress("UNUSED_PARAMETER") sharedTransitionScope: SharedTransitionScope? = null,
+    @Suppress("UNUSED_PARAMETER") animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val viewModel: RecipeStepsViewModel = koinViewModel { parametersOf(id, startStep) }
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val view = LocalView.current
 
     LaunchedEffect(Unit) {
-        viewModel.navEvents.collect { event ->
+        viewModel.navEvents.collectLatest { event ->
             when (event) {
                 RecipeStepsNavEvent.NavigateBack -> onBackClick()
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.brewEffects.collect { effect ->
+            val constant = when (effect) {
+                is BrewingEffect.StepCompleted -> HapticFeedbackConstants.LONG_PRESS
+                is BrewingEffect.AutoAdvanceArmed -> HapticFeedbackConstants.CLOCK_TICK
+                is BrewingEffect.AutoAdvanceFired -> HapticFeedbackConstants.VIRTUAL_KEY
+                BrewingEffect.SessionFinished -> HapticFeedbackConstants.LONG_PRESS
+                is BrewingEffect.StepChanged,
+                BrewingEffect.AutoAdvanceCancelled -> null
+            }
+            if (constant != null) {
+                view.performHapticFeedback(constant)
             }
         }
     }
@@ -84,45 +113,36 @@ internal fun RecipeStepsRoute(
     ) { session ->
         RecipeStepsScreen(
             session = session,
-            sharedTransitionScope = sharedTransitionScope,
-            animatedVisibilityScope = animatedVisibilityScope,
             onBackClick = onBackClick,
-            onNextStep = viewModel::nextStep,
             onPreviousStep = viewModel::previousStep,
+            onNextStep = viewModel::nextStep,
             onPauseTimer = viewModel::pauseTimer,
             onResumeTimer = viewModel::resumeTimer,
+            onToggleExpand = viewModel::toggleExpand,
+            onCancelAutoAdvance = viewModel::cancelAutoAdvance,
+            onAutoAdvanceToggle = viewModel::onAutoAdvanceToggle,
             onFinish = viewModel::finish,
         )
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun RecipeStepsScreen(
-    session: SessionState,
-    sharedTransitionScope: SharedTransitionScope?,
-    animatedVisibilityScope: AnimatedVisibilityScope?,
+    session: SessionUiState,
     onBackClick: () -> Unit,
-    onNextStep: () -> Unit,
     onPreviousStep: () -> Unit,
+    onNextStep: () -> Unit,
     onPauseTimer: () -> Unit,
     onResumeTimer: () -> Unit,
+    onToggleExpand: (Int) -> Unit,
+    onCancelAutoAdvance: () -> Unit,
+    onAutoAdvanceToggle: (Boolean) -> Unit,
     onFinish: () -> Unit,
 ) {
-    val sharedElementModifier =
-        if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-            with(sharedTransitionScope) {
-                Modifier.sharedBounds(
-                    sharedContentState = rememberSharedContentState(key = "brew_step_${session.currentStepIndex}"),
-                    animatedVisibilityScope = animatedVisibilityScope,
-                )
-            }
-        } else Modifier
-
     Box(
-        modifier = sharedElementModifier
+        modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.surface),
     ) {
         AnimatedContent(
             targetState = session.isFinished,
@@ -130,21 +150,24 @@ private fun RecipeStepsScreen(
                 fadeIn(tween(400)) + scaleIn(tween(400), initialScale = 0.92f) togetherWith
                         fadeOut(tween(200))
             },
-            label = "brewing_completion",
+            label = "completion_swap",
         ) { finished ->
             if (finished) {
-                CompletionContent(
-                    modifier = Modifier.fillMaxSize(),
+                BrewingCompletionContent(
                     onFinish = onFinish,
+                    modifier = Modifier.fillMaxSize(),
                 )
             } else {
-                StepContent(
+                ActiveSessionContent(
                     session = session,
                     onBackClick = onBackClick,
-                    onNextStep = onNextStep,
                     onPreviousStep = onPreviousStep,
+                    onNextStep = onNextStep,
                     onPauseTimer = onPauseTimer,
                     onResumeTimer = onResumeTimer,
+                    onToggleExpand = onToggleExpand,
+                    onCancelAutoAdvance = onCancelAutoAdvance,
+                    onAutoAdvanceToggle = onAutoAdvanceToggle,
                 )
             }
         }
@@ -152,297 +175,267 @@ private fun RecipeStepsScreen(
 }
 
 @Composable
-private fun StepContent(
-    session: SessionState,
+private fun ActiveSessionContent(
+    session: SessionUiState,
     onBackClick: () -> Unit,
-    onNextStep: () -> Unit,
     onPreviousStep: () -> Unit,
+    onNextStep: () -> Unit,
+    onPauseTimer: () -> Unit,
+    onResumeTimer: () -> Unit,
+    onToggleExpand: (Int) -> Unit,
+    onCancelAutoAdvance: () -> Unit,
+    onAutoAdvanceToggle: (Boolean) -> Unit,
+) {
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(session.currentStepIndex) {
+        listState.animateScrollToItem(session.currentStepIndex.coerceAtLeast(0))
+    }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentWindowInsets = WindowInsets(0),
+        topBar = {
+            RecipeStepsTopBar(
+                recipeTitle = session.recipeTitle,
+                currentStepDisplay = session.currentStepIndex + 1,
+                totalSteps = session.totalSteps,
+                autoAdvance = session.autoAdvance,
+                onBackClick = onBackClick,
+                onAutoAdvanceToggle = onAutoAdvanceToggle,
+            )
+        },
+        bottomBar = {
+            BottomBar(
+                session = session,
+                onPreviousStep = onPreviousStep,
+                onNextStep = onNextStep,
+                onPauseTimer = onPauseTimer,
+                onResumeTimer = onResumeTimer,
+            )
+        },
+    ) { innerPadding ->
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding()),
+            contentPadding = PaddingValues(
+                start = Spacing.lg,
+                end = Spacing.lg,
+                bottom = innerPadding.calculateBottomPadding() + Spacing.xl,
+                top = Spacing.sm,
+            ),
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+        ) {
+            itemsIndexed(
+                items = session.rows,
+                key = { _, row -> row.index },
+            ) { _, row ->
+                BrewingRow(
+                    row = row,
+                    isLast = row.index == session.rows.lastIndex,
+                    session = session,
+                    onActiveClick = { onToggleExpand(row.index) },
+                    onCancelAutoAdvance = onCancelAutoAdvance,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BrewingRow(
+    row: BrewingStepRowUiState,
+    isLast: Boolean,
+    session: SessionUiState,
+    onActiveClick: () -> Unit,
+    onCancelAutoAdvance: () -> Unit,
+) {
+    val isActiveExpanded = row.kind == StepRowKind.Active && row.isExpanded
+    val animatedBadgeSize by animateDpAsState(
+        targetValue = if (isActiveExpanded) 40.dp else 28.dp,
+        animationSpec = tween(
+            durationMillis = 320,
+            delayMillis = if (isActiveExpanded) ActivationDelayMillis else 0,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "badge_size",
+    )
+    val fillProgress by animateFloatAsState(
+        targetValue = if (row.kind == StepRowKind.Done) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = ConnectorAnimMillis,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "connector_fill",
+    )
+    val trackColor = MaterialTheme.colorScheme.outlineVariant
+    val fillColor = MaterialTheme.colorScheme.tertiary
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                if (isLast) return@drawBehind
+                val centerX = BadgeColumnWidth.toPx() / 2
+                val startY = Spacing.sm.toPx() + animatedBadgeSize.toPx() + Spacing.xs.toPx()
+                val endY = size.height
+                if (endY <= startY) return@drawBehind
+                val stroke = ConnectorWidth.toPx()
+                drawLine(
+                    color = trackColor,
+                    start = Offset(centerX, startY),
+                    end = Offset(centerX, endY),
+                    strokeWidth = stroke,
+                    cap = StrokeCap.Round,
+                )
+                if (fillProgress > 0f) {
+                    drawLine(
+                        color = fillColor,
+                        start = Offset(centerX, startY),
+                        end = Offset(centerX, startY + (endY - startY) * fillProgress),
+                        strokeWidth = stroke,
+                        cap = StrokeCap.Round,
+                    )
+                }
+            },
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .width(BadgeColumnWidth)
+                .padding(top = Spacing.sm),
+        ) {
+            StepIndicatorBadge(
+                kind = row.kind,
+                number = row.displayNumber,
+                size = animatedBadgeSize,
+            )
+        }
+        AnimatedContent(
+            targetState = isActiveExpanded,
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = Spacing.xs),
+            transitionSpec = {
+                (fadeIn(tween(durationMillis = 320)) togetherWith
+                        fadeOut(tween(durationMillis = 180)))
+                    .using(
+                        SizeTransform { _, _ ->
+                            tween(durationMillis = 360, easing = FastOutSlowInEasing)
+                        },
+                    )
+            },
+            label = "step_card_swap",
+        ) { expanded ->
+            if (expanded) {
+                BrewingActiveCard(
+                    title = row.title,
+                    timer = session.timer,
+                    autoAdvanceCountdown = session.autoAdvanceCountdown,
+                    onClick = onActiveClick,
+                    onCancelAutoAdvance = onCancelAutoAdvance,
+                )
+            } else {
+                val onClick: () -> Unit = if (row.kind == StepRowKind.Active) onActiveClick else NoOpClick
+                CollapsedStepContent(
+                    title = row.title,
+                    durationLabel = activeRowRemainingOrDuration(row, session),
+                    kind = row.kind,
+                    onClick = onClick,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BottomBar(
+    session: SessionUiState,
+    onPreviousStep: () -> Unit,
+    onNextStep: () -> Unit,
     onPauseTimer: () -> Unit,
     onResumeTimer: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding(),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBackClick) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_arrow_left),
-                    contentDescription = "navigate back button",
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            Text(
-                text = stringResource(
-                    R.string.steps_step_counter,
-                    session.currentStepIndex + 1,
-                    session.totalSteps,
-                ),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        val animatedStepProgress by animateFloatAsState(
-            targetValue = session.stepProgress,
-            animationSpec = tween(400),
-            label = "step_progress",
-        )
-        LinearProgressIndicator(
-            progress = { animatedStepProgress },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg),
-            color = MaterialTheme.colorScheme.tertiary,
-            trackColor = MaterialTheme.colorScheme.outlineVariant,
-        )
-
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            contentAlignment = Alignment.Center,
-        ) {
-            AnimatedContent(
-                targetState = session.currentStepIndex,
-                transitionSpec = {
-                    if (targetState > initialState) {
-                        slideInHorizontally { it } + fadeIn(tween(300)) togetherWith
-                                slideOutHorizontally { -it } + fadeOut(tween(200))
-                    } else {
-                        slideInHorizontally { -it } + fadeIn(tween(300)) togetherWith
-                                slideOutHorizontally { it } + fadeOut(tween(200))
-                    }
-                },
-                label = "step_content",
-            ) { stepIndex ->
-                val step = session.steps[stepIndex]
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.xxxl),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
-                ) {
-                    Text(
-                        text = step.title,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center,
-                    )
-                    Text(
-                        text = step.description,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-        }
-
-        if (session.hasTimer) {
-            CircularTimer(
-                timerProgress = session.timerProgress,
-                remainingSeconds = session.remainingSeconds,
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(Spacing.xl),
-            )
-        } else {
-            Spacer(modifier = Modifier.height(Spacing.xl))
-        }
-
-        BottomControls(
-            isFirstStep = session.isFirstStep,
-            hasTimer = session.hasTimer,
-            isTimerRunning = session.isTimerRunning,
-            onPreviousStep = onPreviousStep,
-            onPauseResume = {
-                if (session.isTimerRunning) onPauseTimer() else onResumeTimer()
-            },
-            onNextStep = onNextStep,
-        )
-    }
-}
-
-@Composable
-private fun CircularTimer(
-    timerProgress: Float,
-    remainingSeconds: Int,
-    modifier: Modifier = Modifier,
-) {
-    val animatedProgress by animateFloatAsState(
-        targetValue = timerProgress,
-        animationSpec = tween(durationMillis = TimerAnimationDurationMillis, easing = LinearEasing),
-        label = "timer_arc",
-    )
-    val arcColor = MaterialTheme.colorScheme.tertiary
-    val trackColor = MaterialTheme.colorScheme.outlineVariant
-
     Box(
-        modifier = modifier.size(160.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .navigationBarsPadding()
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val stroke = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
-            drawArc(
-                color = trackColor,
-                startAngle = -90f,
-                sweepAngle = 360f,
-                useCenter = false,
-                style = stroke,
-            )
-            drawArc(
-                color = arcColor,
-                startAngle = -90f,
-                sweepAngle = 360f * animatedProgress,
-                useCenter = false,
-                style = stroke,
-            )
-        }
-        Text(
-            text = formatSeconds(remainingSeconds),
-            style = MaterialTheme.typography.displayMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+        BrewingControlsDock(
+            isFirstStep = session.isFirstStep,
+            isLastStep = session.isLastStep,
+            hasTimer = session.hasTimer,
+            isTimerRunning = session.timer?.isRunning == true,
+            onPrevious = onPreviousStep,
+            onPauseResume = {
+                val isRunning = session.timer?.isRunning == true
+                if (isRunning) onPauseTimer() else onResumeTimer()
+            },
+            onNext = onNextStep,
         )
     }
 }
 
 @Composable
-private fun BottomControls(
-    isFirstStep: Boolean,
-    hasTimer: Boolean,
-    isTimerRunning: Boolean,
-    onPreviousStep: () -> Unit,
-    onPauseResume: () -> Unit,
-    onNextStep: () -> Unit,
+private fun RecipeStepsTopBar(
+    recipeTitle: String,
+    currentStepDisplay: Int,
+    totalSteps: Int,
+    autoAdvance: Boolean,
+    onBackClick: () -> Unit,
+    onAutoAdvanceToggle: (Boolean) -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Spacing.xl, vertical = Spacing.xl),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+            .background(MaterialTheme.colorScheme.surface)
+            .statusBarsPadding()
+            .padding(horizontal = Spacing.xs, vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(
-            onClick = onPreviousStep,
-            enabled = !isFirstStep,
-            modifier = Modifier.size(56.dp),
-        ) {
+        IconButton(onClick = onBackClick) {
             Icon(
                 painter = painterResource(R.drawable.ic_arrow_left),
-                contentDescription = "previous step button",
-                tint = if (isFirstStep) {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-            )
-        }
-
-        if (hasTimer) {
-            FilledIconButton(
-                onClick = onPauseResume,
-                modifier = Modifier.size(72.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-            ) {
-                AnimatedContent(
-                    targetState = isTimerRunning,
-                    transitionSpec = {
-                        fadeIn(tween(150)) togetherWith fadeOut(tween(150))
-                    },
-                    label = "pause_resume_icon",
-                ) { running ->
-
-                    if(running) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_pause),
-                            contentDescription = "pause button",
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    } else {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_play_arrow),
-                            contentDescription = "resume button",
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    }
-                }
-            }
-        } else {
-            Spacer(modifier = Modifier.size(72.dp))
-        }
-
-        IconButton(
-            onClick = onNextStep,
-            modifier = Modifier.size(56.dp),
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_arrow_right),
-                contentDescription = "previous step button",
+                contentDescription = stringResource(R.string.back_label),
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         }
-    }
-}
-
-@Composable
-private fun CompletionContent(
-    onFinish: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .padding(Spacing.xxxl),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_coffee),
-            contentDescription = "coffee cup icon",
-            tint = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(modifier = Modifier.height(Spacing.xl))
-        Text(
-            text = stringResource(R.string.steps_brew_ready),
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(Spacing.xxxl))
-        Button(
-            onClick = onFinish,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            ),
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = ShapeXxl,
+                .weight(1f)
+                .padding(horizontal = Spacing.sm),
         ) {
             Text(
-                text = stringResource(R.string.steps_finish),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onPrimary,
+                text = recipeTitle,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringResource(R.string.steps_step_counter, currentStepDisplay, totalSteps),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        AutoAdvanceToggle(
+            autoAdvance = autoAdvance,
+            onToggle = onAutoAdvanceToggle,
+            modifier = Modifier.padding(end = Spacing.sm),
+        )
     }
 }
 
-private fun formatSeconds(seconds: Int): String {
-    val m = seconds / 60
-    val s = seconds % 60
-    return "%d:%02d".format(m, s)
+private fun activeRowRemainingOrDuration(
+    row: BrewingStepRowUiState,
+    session: SessionUiState,
+): String? {
+    if (row.kind != StepRowKind.Active) return row.durationLabel
+    if (session.timer == null) return null
+    return session.timer.remainingLabel
 }

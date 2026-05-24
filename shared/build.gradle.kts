@@ -48,6 +48,7 @@ kotlin {
             implementation(libs.sqldelight.android)
             implementation(libs.paging.common)
             implementation(libs.sqldelight.paging)
+            implementation(libs.androidx.datastore.preferences)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -55,6 +56,8 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.turbine)
         }
     }
 }

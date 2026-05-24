@@ -82,3 +82,19 @@ val DarkTertiaryFg = Color(0xFF1A140E)
 val DarkTertiaryContainer = Color(0xFF4A3A2B)
 val DarkTertiaryContainerFg = Sand100
 val DarkDestructive = Color(0xFFB64A60)
+
+// ---------------------------------------------------------------------------
+// Surface container ramp — warm neutral tones (overrides Material defaults
+// that would otherwise derive lavender/pink tints from default primary).
+// ---------------------------------------------------------------------------
+val LightSurfaceContainerLowest = Color(0xFFFFFFFF)
+val LightSurfaceContainerLow = Color(0xFFF8F5EF)
+val LightSurfaceContainer = Color(0xFFF1ECE2)
+val LightSurfaceContainerHigh = Color(0xFFE9E2D3)
+val LightSurfaceContainerHighest = Color(0xFFE0D6C2)
+
+val DarkSurfaceContainerLowest = Color(0xFF101012)
+val DarkSurfaceContainerLow = Color(0xFF181A1E)
+val DarkSurfaceContainer = Color(0xFF1F2126)
+val DarkSurfaceContainerHigh = Color(0xFF272A2F)
+val DarkSurfaceContainerHighest = Color(0xFF323439)

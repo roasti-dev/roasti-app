@@ -25,7 +25,6 @@ internal fun Recipe.toEditState() = EditRecipeUiState(
 private fun BrewStep.toFormStep() = RecipeFormStepUiModel(
     order = order,
     title = title,
-    description = description,
     durationSeconds = durationSeconds,
     imageId = imageId,
 )

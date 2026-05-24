@@ -76,7 +76,6 @@ internal fun CachedRecipe.toDomain(steps: List<CachedRecipeStep> = emptyList()):
 private fun CachedRecipeStep.toDomain(): BrewStep = BrewStep(
     order = step_order.toInt(),
     title = title,
-    description = description,
     durationSeconds = duration_seconds?.toInt(),
     imageId = image_id,
 )
