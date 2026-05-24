@@ -22,6 +22,7 @@ kotlinx-serialization = "1.11.0"
 sqldelight = "2.3.2"
 paging = "3.4.2"
 phosphor-icon = "1.0.0"
+telephoto = "0.19.0"
 turbine = "1.1.0"
 
 # Backend versions
@@ -75,6 +76,8 @@ sqldelight-jdbc = { module = "app.cash.sqldelight:sqlite-driver", version.ref = 
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 phosphor-icons = { module = "com.adamglin:phosphor-icon", version.ref = "phosphor-icon" }
+telephoto-zoomable-image-coil3 = { module = "me.saket.telephoto:zoomable-image-coil3", version.ref = "telephoto" }
+telephoto-flick = { module = "me.saket.telephoto:flick", version.ref = "telephoto" }
 
 # Backend libraries
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }

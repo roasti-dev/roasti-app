@@ -15,7 +15,7 @@ fun Post.toUiModel(currentUserId: String? = null): PostUiModel = PostUiModel(
     postedAt = createdAt,
     title = title?.takeIf { it.isNotBlank() },
     body = text.takeIf { it.isNotBlank() },
-    postImageUrl = images.firstOrNull()?.let(::imageUrl),
+    images = images.map(::imageUrl),
     ratingState = PostRatingStateUi(
         userReaction = userVote.toUi(),
         postRating = rating,

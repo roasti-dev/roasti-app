@@ -328,22 +328,20 @@ private fun PostDetailContent(
                 postedAt = post.postedAt,
                 title = post.title,
                 body = post.body,
-                postImageUrl = post.postImageUrl,
+                images = post.images,
                 ratingState = post.ratingState,
                 commentsCount = post.commentsCount,
                 isExpanded = true,
                 onRatingChange = onRatingChange,
                 onAuthorClick = { onAuthorClick(post.authorId, post.authorName, postAvatarTag) },
-                onImageClick = {
-                    post.postImageUrl?.let { url -> onImageClick(listOf(url), 0) }
-                },
-                imageModifier = post.postImageUrl?.let { url ->
-                    dev.roasti.ui.uikit.photoviewer.photoSharedBoundsModifier(
-                        imageUrl = url,
+                onImageClick = { index -> onImageClick(post.images, index) },
+                pageImageModifier = { index ->
+                    dev.roasti.ui.uikit.photoviewer.photoSharedElementModifier(
+                        imageUrl = post.images[index],
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
                     )
-                } ?: Modifier,
+                },
                 avatarModifier = dev.roasti.ui.util.userAvatarSharedElementModifier(
                     tag = postAvatarTag,
                     sharedTransitionScope = sharedTransitionScope,

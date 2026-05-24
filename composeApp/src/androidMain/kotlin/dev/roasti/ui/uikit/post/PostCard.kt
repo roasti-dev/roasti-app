@@ -1,7 +1,6 @@
 package dev.roasti.ui.uikit.post
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,7 +19,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -42,7 +40,7 @@ fun PostCard(
     postedAt: Instant?,
     title: String?,
     body: String?,
-    postImageUrl: String?,
+    images: List<String>,
     ratingState: PostRatingStateUi,
     commentsCount: Int,
     modifier: Modifier = Modifier,
@@ -54,8 +52,8 @@ fun PostCard(
     onShareClick: () -> Unit = {},
     onOwnerOptionsClick: () -> Unit = {},
     onAuthorClick: (() -> Unit)? = null,
-    onImageClick: () -> Unit = {},
-    imageModifier: Modifier = Modifier,
+    onImageClick: (index: Int) -> Unit = {},
+    pageImageModifier: @Composable (index: Int) -> Modifier = { Modifier },
     avatarModifier: Modifier = Modifier,
 ) {
     val ratingHandler = onRatingChange
@@ -130,14 +128,14 @@ fun PostCard(
             }
         }
 
-        if (postImageUrl != null) {
-            PostImageCard(
-                fullUrl = postImageUrl,
+        if (images.isNotEmpty()) {
+            PostImageCarousel(
+                images = images,
+                onImageClick = onImageClick,
+                pageModifier = pageImageModifier,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 300.dp)
-                    .then(imageModifier)
-                    .pointerInput(onImageClick) { detectTapGestures { onImageClick() } },
+                    .heightIn(max = 300.dp),
             )
         }
 
@@ -166,7 +164,7 @@ private fun PostCardPreview() {
                 postedAt = Clock.System.now() - 0.5.hours - 2.minutes,
                 title = "Dialing in the new Ethiopian Yirgacheffe this morning",
                 body = "The floral notes are absolutely singing with a slightly coarser grind and a lower water temp (around 92°C). Definitely worth the extra few minutes of prep...",
-                postImageUrl = "",
+                images = listOf("", ""),
                 ratingState = PostRatingStateUi(PostUserReaction.NONE, 124),
                 commentsCount = 12,
             )

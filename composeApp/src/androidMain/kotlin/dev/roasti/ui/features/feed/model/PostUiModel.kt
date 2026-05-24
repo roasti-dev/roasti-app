@@ -13,7 +13,7 @@ data class PostUiModel(
     val postedAt: Instant,
     val title: String?,
     val body: String?,
-    val postImageUrl: String?,
+    val images: List<String>,
     val ratingState: PostRatingStateUi,
     val commentsCount: Int,
     val isOwn: Boolean,

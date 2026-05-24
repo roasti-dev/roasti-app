@@ -148,6 +148,8 @@
     <string name="post_compose_remove_photo">Remove photo</string>
     <string name="post_compose_photo_uploading">Uploading…</string>
     <string name="post_compose_photo_upload_error">Failed to upload photo</string>
+    <string name="post_compose_photos_max_reached">Max %1$d photos per post</string>
+    <string name="post_compose_add_more_photos">Add more</string>
 
     <!-- Post owner actions -->
     <string name="post_media_source_title">Choose photo source</string>

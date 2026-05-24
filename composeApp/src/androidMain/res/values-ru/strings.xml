@@ -149,6 +149,8 @@
     <string name="post_compose_remove_photo">Удалить фото</string>
     <string name="post_compose_photo_uploading">Загружается…</string>
     <string name="post_compose_photo_upload_error">Не удалось загрузить фото</string>
+    <string name="post_compose_photos_max_reached">Максимум %1$d фото в посте</string>
+    <string name="post_compose_add_more_photos">Добавить ещё</string>
 
     <!-- Post owner actions -->
     <string name="post_media_source_title">Выбрать источник фото</string>

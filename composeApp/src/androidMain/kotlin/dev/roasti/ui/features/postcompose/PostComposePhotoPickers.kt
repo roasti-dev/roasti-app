@@ -12,18 +12,22 @@ import dev.roasti.utils.compressImage
 import java.io.File
 import java.util.UUID
 
-typealias OnPhotoPicked = (fileName: String, bytes: ByteArray) -> Unit
+typealias OnPhotosPicked = (picks: List<PickedImage>) -> Unit
 
 @Composable
-fun rememberGalleryPicker(onResult: OnPhotoPicked): () -> Unit {
+fun rememberGalleryPicker(onResult: OnPhotosPicked): () -> Unit {
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-    ) { uri: Uri? ->
-        if (uri != null) {
-            val bytes = compressImage(context.contentResolver, uri)
-            onResult("${UUID.randomUUID()}.jpg", bytes)
+        contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_POST_PHOTOS),
+    ) { uris: List<Uri> ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        val picks = uris.map { uri ->
+            PickedImage(
+                fileName = "${UUID.randomUUID()}.jpg",
+                bytes = compressImage(context.contentResolver, uri),
+            )
         }
+        onResult(picks)
     }
     return remember(launcher) {
         {
@@ -35,21 +39,19 @@ fun rememberGalleryPicker(onResult: OnPhotoPicked): () -> Unit {
 }
 
 @Composable
-fun rememberCameraPicker(onResult: OnPhotoPicked): () -> Unit {
+fun rememberCameraPicker(onResult: OnPhotosPicked): () -> Unit {
     val context = LocalContext.current
-    val pendingUriHolder = remember { arrayOfNulls<Uri>(1) }
     val pendingFileHolder = remember { arrayOfNulls<File>(1) }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
     ) { saved: Boolean ->
         val file = pendingFileHolder[0]
-        pendingUriHolder[0] = null
         pendingFileHolder[0] = null
         if (saved && file != null && file.exists()) {
             val uri = Uri.fromFile(file)
             val bytes = compressImage(context.contentResolver, uri)
-            onResult(file.name, bytes)
+            onResult(listOf(PickedImage(fileName = file.name, bytes = bytes)))
             file.delete()
         }
     }
@@ -63,7 +65,6 @@ fun rememberCameraPicker(onResult: OnPhotoPicked): () -> Unit {
                 "${context.packageName}.fileprovider",
                 file,
             )
-            pendingUriHolder[0] = uri
             pendingFileHolder[0] = file
             launcher.launch(uri)
         }

@@ -3,46 +3,39 @@ package dev.roasti.ui.uikit.photoviewer
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 
 private const val PhotoKeyPrefix = "photo_"
-private const val SharedBoundsDurationMillis = 280
 
 /**
- * Hero/shared-element modifier for photos. Apply the same modifier (with same [imageUrl])
- * on the source thumbnail and the destination viewer image — Compose will animate bounds
- * + visuals between them when navigating.
+ * Hero modifier for photos. Apply with the same [imageUrl] on the source thumbnail
+ * and the destination viewer image — Compose interpolates bounds and morphs the pixels
+ * between them on navigation.
  *
- * Uses [SharedTransitionScope.ResizeMode.ScaleToBounds] with [ContentScale.Crop] so the image
- * content fills the interpolated bounds consistently on both sides during the animation
- * (avoids the "jump" you'd otherwise see when source uses `FillWidth` and target uses `Fit`).
+ * Uses [SharedTransitionScope.sharedElement] (not sharedBounds) because both sides
+ * render the same image bitmap; we want pixel-level morph, not container-bounds morph.
+ * This avoids the crop/fit mismatch that sharedBounds + ScaleToBounds caused.
  *
- * Returns [Modifier] (no-op when transition scopes are unavailable, e.g. previews).
+ * Pass [enabled] = false to skip registration (e.g., during flick-to-dismiss, where
+ * the viewer plays its own dismiss animation and the shared element would teleport
+ * back to layout-fullscreen bounds before morphing).
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun photoSharedBoundsModifier(
+fun photoSharedElementModifier(
     imageUrl: String,
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
+    enabled: Boolean = true,
 ): Modifier {
-    if (sharedTransitionScope == null || animatedVisibilityScope == null) return Modifier
+    if (!enabled || sharedTransitionScope == null || animatedVisibilityScope == null) {
+        return Modifier
+    }
     return with(sharedTransitionScope) {
-        Modifier.sharedBounds(
+        Modifier.sharedElement(
             sharedContentState = rememberSharedContentState(key = "$PhotoKeyPrefix$imageUrl"),
             animatedVisibilityScope = animatedVisibilityScope,
-            resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(
-                contentScale = ContentScale.Crop,
-                alignment = Alignment.Center,
-            ),
-            enter = fadeIn(tween(SharedBoundsDurationMillis)),
-            exit = fadeOut(tween(SharedBoundsDurationMillis)),
         )
     }
 }

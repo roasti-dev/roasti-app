@@ -109,6 +109,8 @@ dependencies {
     implementation(libs.paging.runtime)
     implementation(libs.paging.compose)
     implementation(libs.phosphor.icons)
+    implementation(libs.telephoto.zoomable.image.coil3)
+    implementation(libs.telephoto.flick)
     debugImplementation(libs.compose.uiTooling)
 
     testImplementation(libs.kotlin.test)

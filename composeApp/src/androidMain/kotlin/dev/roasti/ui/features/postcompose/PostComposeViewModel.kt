@@ -10,10 +10,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import dev.roasti.core.utils.imageUrl
 import dev.roasti.feature.post.data.paging.PagingPostRepository
 import dev.roasti.feature.upload.domain.UploadRepository
 
+const val MAX_POST_PHOTOS = 10
+
+@OptIn(ExperimentalUuidApi::class)
 class PostComposeViewModel(
     private val postId: String?,
     private val pagingPostRepository: PagingPostRepository,
@@ -45,29 +50,23 @@ class PostComposeViewModel(
         _state.update { it.copy(body = value, submitError = null) }
     }
 
-    fun onImagePicked(fileName: String, bytes: ByteArray) {
-        _state.update { it.copy(photoState = PhotoState.Uploading) }
-        viewModelScope.launch {
-            uploadRepository.uploadImage(fileName, bytes).fold(
-                onSuccess = { uploaded ->
-                    _state.update {
-                        it.copy(
-                            photoState = PhotoState.Ready(
-                                imageId = uploaded.id,
-                                previewUrl = imageUrl(uploaded.id),
-                            )
-                        )
-                    }
-                },
-                onFailure = {
-                    _state.update { it.copy(photoState = PhotoState.Error) }
-                },
-            )
+    fun onImagesPicked(picks: List<PickedImage>) {
+        if (picks.isEmpty()) return
+        val current = _state.value
+        val remaining = MAX_POST_PHOTOS - current.photos.size
+        val accepted = picks.take(remaining)
+        if (accepted.size < picks.size) {
+            eventsChannel.trySend(PostComposeEvent.MaxPhotosReached)
         }
+
+        val newSlots = accepted.map { PhotoSlot.Uploading(localId = Uuid.random().toString(), fileName = it.fileName) }
+        _state.update { it.copy(photos = it.photos + newSlots, submitError = null) }
+
+        accepted.zip(newSlots).forEach { (pick, slot) -> uploadPhoto(slot.localId, pick) }
     }
 
-    fun onRemoveImage() {
-        _state.update { it.copy(photoState = PhotoState.None) }
+    fun onRemovePhoto(localId: String) {
+        _state.update { it.copy(photos = it.photos.filterNot { slot -> slot.localId == localId }) }
     }
 
     fun onSubmit() {
@@ -77,9 +76,7 @@ class PostComposeViewModel(
 
         val title = current.title.trim()
         val body = current.body.trim().takeIf { it.isNotEmpty() }
-
-        val imageIds = (current.photoState as? PhotoState.Ready)?.let { listOf(it.imageId) }
-            ?: emptyList()
+        val imageIds = current.photos.filterIsInstance<PhotoSlot.Ready>().map { it.imageId }
 
         viewModelScope.launch {
             val result = if (postId == null) {
@@ -104,17 +101,38 @@ class PostComposeViewModel(
         }
     }
 
+    private fun uploadPhoto(localId: String, pick: PickedImage) {
+        viewModelScope.launch {
+            uploadRepository.uploadImage(pick.fileName, pick.bytes).fold(
+                onSuccess = { uploaded ->
+                    _state.update { it.copy(photos = it.photos.replaceById(localId) {
+                        PhotoSlot.Ready(localId = localId, imageId = uploaded.id, previewUrl = imageUrl(uploaded.id))
+                    }) }
+                },
+                onFailure = {
+                    _state.update { it.copy(photos = it.photos.replaceById(localId) {
+                        PhotoSlot.Error(localId = localId, fileName = pick.fileName)
+                    }) }
+                },
+            )
+        }
+    }
+
     private fun loadExistingPost(id: String) {
         viewModelScope.launch {
             val post = pagingPostRepository.observePostById(id).first { it != null } ?: return@launch
-            val photoState = post.images.firstOrNull()?.let { imageId ->
-                PhotoState.Ready(imageId = imageId, previewUrl = imageUrl(imageId))
-            } ?: PhotoState.None
+            val photos = post.images.map { imageId ->
+                PhotoSlot.Ready(
+                    localId = Uuid.random().toString(),
+                    imageId = imageId,
+                    previewUrl = imageUrl(imageId),
+                )
+            }
             _state.update {
                 it.copy(
                     title = post.title.orEmpty(),
                     body = post.text,
-                    photoState = photoState,
+                    photos = photos,
                     isLoadingExisting = false,
                 )
             }
@@ -122,30 +140,44 @@ class PostComposeViewModel(
     }
 }
 
+private inline fun List<PhotoSlot>.replaceById(localId: String, transform: (PhotoSlot) -> PhotoSlot): List<PhotoSlot> =
+    map { if (it.localId == localId) transform(it) else it }
+
 enum class PostComposeMode { CREATE, EDIT }
+
+data class PickedImage(val fileName: String, val bytes: ByteArray) {
+    override fun equals(other: Any?): Boolean = this === other
+    override fun hashCode(): Int = System.identityHashCode(this)
+}
 
 data class PostComposeUiState(
     val mode: PostComposeMode = PostComposeMode.CREATE,
     val title: String = "",
     val body: String = "",
-    val photoState: PhotoState = PhotoState.None,
+    val photos: List<PhotoSlot> = emptyList(),
     val isLoadingExisting: Boolean = false,
     val isSubmitting: Boolean = false,
     val submitError: SubmitError? = null,
 ) {
     val canSubmit: Boolean
-        get() = !isSubmitting && !isLoadingExisting && title.isNotBlank()
+        get() = !isSubmitting && !isLoadingExisting && title.isNotBlank() &&
+            photos.none { it is PhotoSlot.Uploading || it is PhotoSlot.Error }
+
+    val canAddMorePhotos: Boolean get() = photos.size < MAX_POST_PHOTOS
+    val remainingPhotoSlots: Int get() = (MAX_POST_PHOTOS - photos.size).coerceAtLeast(0)
 }
 
-sealed interface PhotoState {
-    data object None : PhotoState
-    data object Uploading : PhotoState
-    data class Ready(val imageId: String, val previewUrl: String) : PhotoState
-    data object Error : PhotoState
+sealed interface PhotoSlot {
+    val localId: String
+
+    data class Uploading(override val localId: String, val fileName: String) : PhotoSlot
+    data class Ready(override val localId: String, val imageId: String, val previewUrl: String) : PhotoSlot
+    data class Error(override val localId: String, val fileName: String) : PhotoSlot
 }
 
 object SubmitError
 
 sealed interface PostComposeEvent {
     data object SubmitSuccess : PostComposeEvent
+    data object MaxPhotosReached : PostComposeEvent
 }
