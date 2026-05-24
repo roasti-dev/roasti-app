@@ -48,11 +48,13 @@
     <string name="recipe_roast_level_dark">Dark</string>
     <!-- Create Recipe Screen -->
     <string name="create_recipe_create">Create Recipe</string>
+    <string name="create_recipe_top_bar_title">Create Recipe</string>
     <!-- Edit Recipe -->
     <string name="edit_recipe_save">Save</string>
     <string name="edit_recipe_save_changes">Save Changes</string>
-    <string name="edit_recipe_title_hint">Recipe title…</string>
-    <string name="edit_recipe_description_hint">Describe this recipe…</string>
+    <string name="edit_recipe_top_bar_title">Edit Recipe</string>
+    <string name="edit_recipe_title_hint">Recipe title</string>
+    <string name="edit_recipe_description_hint">Describe this recipe</string>
     <string name="edit_recipe_beans_hint">e.g. Ethiopia Yirgacheffe</string>
     <string name="edit_recipe_add_step">+ Add Step</string>
     <string name="edit_recipe_save_error">Failed to save. Please try again.</string>
@@ -62,11 +64,21 @@
     <string name="edit_recipe_keep_editing">Keep editing</string>
     <string name="edit_recipe_step_add_title">Add Step</string>
     <string name="edit_recipe_step_edit_title">Edit Step</string>
-    <string name="edit_recipe_step_title_label">Title</string>
+    <string name="edit_recipe_step_title_label">Step title</string>
+    <string name="edit_recipe_step_title_hint">e.g. Bloom</string>
     <string name="edit_recipe_step_description_label">Description (optional)</string>
     <string name="edit_recipe_step_duration_min">min</string>
     <string name="edit_recipe_step_duration_sec">sec</string>
     <string name="edit_recipe_step_save">Save Step</string>
+    <string name="edit_recipe_step_duration">Duration</string>
+    <string name="edit_recipe_step_drag_handle">Drag to reorder</string>
+    <string name="edit_recipe_step_delete">Delete step</string>
+    <string name="edit_recipe_required_hint">Fill in required fields</string>
+    <string name="edit_recipe_image_change">Change photo</string>
+    <string name="edit_recipe_image_remove">Remove photo</string>
+    <string name="edit_recipe_step_done">Done</string>
+    <string name="edit_recipe_discard_create_title">Discard recipe?</string>
+    <string name="edit_recipe_discard_create_message">Your new recipe will be lost.</string>
 
     <string name="steps_step_counter">Step %1$d of %2$d</string>
     <string name="steps_brew_ready">Your brew is ready!</string>

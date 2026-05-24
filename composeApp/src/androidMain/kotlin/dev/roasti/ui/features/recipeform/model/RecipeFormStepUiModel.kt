@@ -1,9 +1,11 @@
 package dev.roasti.ui.features.recipeform.model
 
+import java.util.UUID
+
 data class RecipeFormStepUiModel(
-    val order: Int,
+    val id: String = UUID.randomUUID().toString(),
     val title: String,
     val description: String = "",
-    val durationSeconds: Int?,
+    val durationSeconds: Int? = null,
     val imageId: String? = null,
 )

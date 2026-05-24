@@ -49,11 +49,13 @@
     <string name="recipe_roast_level_dark">Тёмная</string>
     <!-- Create Recipe Screen -->
     <string name="create_recipe_create">Создать рецепт</string>
+    <string name="create_recipe_top_bar_title">Создание рецепта</string>
     <!-- Edit Recipe -->
     <string name="edit_recipe_save">Сохранить</string>
     <string name="edit_recipe_save_changes">Сохранить изменения</string>
-    <string name="edit_recipe_title_hint">Название рецепта…</string>
-    <string name="edit_recipe_description_hint">Опишите этот рецепт…</string>
+    <string name="edit_recipe_top_bar_title">Редактирование рецепта</string>
+    <string name="edit_recipe_title_hint">Название рецепта</string>
+    <string name="edit_recipe_description_hint">Опишите этот рецепт</string>
     <string name="edit_recipe_beans_hint">напр. Эфиопия Иргачеффе</string>
     <string name="edit_recipe_add_step">+ Добавить шаг</string>
     <string name="edit_recipe_save_error">Не удалось сохранить. Попробуйте ещё раз.</string>
@@ -63,11 +65,21 @@
     <string name="edit_recipe_keep_editing">Продолжить редактирование</string>
     <string name="edit_recipe_step_add_title">Добавить шаг</string>
     <string name="edit_recipe_step_edit_title">Редактировать шаг</string>
-    <string name="edit_recipe_step_title_label">Название</string>
+    <string name="edit_recipe_step_title_label">Название шага</string>
+    <string name="edit_recipe_step_title_hint">напр. Bloom</string>
     <string name="edit_recipe_step_description_label">Описание (необязательно)</string>
     <string name="edit_recipe_step_duration_min">мин</string>
     <string name="edit_recipe_step_duration_sec">сек</string>
     <string name="edit_recipe_step_save">Сохранить шаг</string>
+    <string name="edit_recipe_step_duration">Длительность</string>
+    <string name="edit_recipe_step_drag_handle">Перетащите для перестановки</string>
+    <string name="edit_recipe_step_delete">Удалить шаг</string>
+    <string name="edit_recipe_required_hint">Заполните обязательные поля</string>
+    <string name="edit_recipe_image_change">Изменить фото</string>
+    <string name="edit_recipe_image_remove">Удалить фото</string>
+    <string name="edit_recipe_step_done">Готово</string>
+    <string name="edit_recipe_discard_create_title">Отменить создание рецепта?</string>
+    <string name="edit_recipe_discard_create_message">Введённые данные будут потеряны.</string>
 
     <string name="steps_step_counter">Шаг %1$d из %2$d</string>
     <string name="steps_brew_ready">Ваш напиток готов!</string>

@@ -3,13 +3,18 @@ package dev.roasti.ui.features.recipeform
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,260 +23,369 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListItemInfo
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.ArrowLeft
-import com.adamglin.phosphoricons.regular.Camera
-import com.adamglin.phosphoricons.regular.Check
-import com.adamglin.phosphoricons.regular.FloppyDiskBack
-import com.adamglin.phosphoricons.regular.Pencil
-import com.adamglin.phosphoricons.regular.TrashSimple
 import dev.roasti.R
 import dev.roasti.feature.recipe.domain.model.BrewMethod
 import dev.roasti.feature.recipe.domain.model.Difficulty
 import dev.roasti.feature.recipe.domain.model.RoastLevel
 import dev.roasti.ui.features.recipe.mapper.labelRes
-import dev.roasti.ui.features.recipeform.model.ActiveStepSheet
 import dev.roasti.ui.features.recipeform.model.RecipeFormFields
 import dev.roasti.ui.features.recipeform.model.RecipeFormStepUiModel
+import dev.roasti.ui.features.recipeform.model.StepDraft
+import dev.roasti.ui.theme.Sand200
+import dev.roasti.ui.theme.Sand300
+import dev.roasti.ui.theme.Sand500
+import dev.roasti.ui.theme.Sand600
+import dev.roasti.ui.theme.Sand700
 import dev.roasti.ui.theme.ShapeXxl
 import dev.roasti.ui.theme.Spacing
-import dev.roasti.ui.uikit.AppIcons
-import dev.roasti.ui.uikit.RoastiBottomSheet
+import dev.roasti.ui.uikit.picker.ChipCarouselPicker
+import dev.roasti.ui.uikit.picker.ChipOption
+import dev.roasti.ui.uikit.picker.TimeWheelPicker
+import dev.roasti.ui.uikit.requiredLabel
+import dev.roasti.ui.theme.RoastiTheme
 import dev.roasti.utils.compressImage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import androidx.compose.ui.tooling.preview.Preview
 import java.util.UUID
 
-private const val IconCheck = "✓"
+private val HeroHeight = 220.dp
+private val SectionHorizontalPadding = Spacing.xxl
+private val StepShape = RoundedCornerShape(16.dp)
+private val FieldShape = RoundedCornerShape(12.dp)
+private val SaveButtonHeight = 56.dp
+private val StepRowMinHeight = 72.dp
+private val ChipMinHeight = 64.dp
+private val DurationChipShape = RoundedCornerShape(10.dp)
 
-internal val RecipeFormHeaderHeight = 220.dp
-internal val RecipeFormHeaderOverlap = 40.dp
-private val MetaChipShape = RoundedCornerShape(18.dp)
-private val StepNumberSize = 28.dp
-private val StepDurationShape = RoundedCornerShape(10.dp)
-private val HeaderActionButtonHeight = 40.dp
-private val PrimaryButtonHeight = 56.dp
-internal val RecipeFormContentShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-private val HeaderActionShape = RoundedCornerShape(20.dp)
-
-private sealed class EnumSheet {
-    object BrewMethod : EnumSheet()
-    object Difficulty : EnumSheet()
-    object RoastLevel : EnumSheet()
-}
+private enum class ExpandedEnumPicker { BrewMethod, Difficulty, RoastLevel }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun RecipeFormScreen(
     form: RecipeFormFields,
+    topBarTitle: String,
     saveButtonLabel: String,
-    onBackClick: () -> Unit,
-    onSaveClick: () -> Unit,
-    onTitleChange: (String) -> Unit,
-    onDescriptionChange: (String) -> Unit,
-    onBeansChange: (String) -> Unit,
-    onBrewMethodChange: (BrewMethod) -> Unit,
-    onDifficultyChange: (Difficulty) -> Unit,
-    onRoastLevelChange: (RoastLevel) -> Unit,
-    onUploadImage: (String, ByteArray) -> Unit,
-    onEditStep: (Int) -> Unit,
-    onDeleteStep: (Int) -> Unit,
-    onAddStep: () -> Unit,
-    onActiveStepTitleChange: (String) -> Unit,
-    onActiveStepDurationMinutesChange: (String) -> Unit,
-    onActiveStepDurationSecondsChange: (String) -> Unit,
-    onConfirmStepEdit: () -> Unit,
-    onCancelStepEdit: () -> Unit,
+    isDirty: Boolean,
+    isCreateMode: Boolean,
+    saveErrorEventTrigger: Int,
+    listener: RecipeFormListener,
 ) {
     var showDiscardDialog by remember { mutableStateOf(false) }
-    var visibleEnumSheet by remember { mutableStateOf<EnumSheet?>(null) }
+    var expandedEnumPicker by remember { mutableStateOf<ExpandedEnumPicker?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val saveErrorText = stringResource(R.string.edit_recipe_save_error)
 
-    BackHandler { showDiscardDialog = true }
+    LaunchedEffect(saveErrorEventTrigger) {
+        if (saveErrorEventTrigger > 0) {
+            snackbarHostState.showSnackbar(saveErrorText)
+        }
+    }
+
+    BackHandler {
+        if (isDirty) showDiscardDialog = true else listener.onBackClick()
+    }
 
     val context = LocalContext.current
-    val imageLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-            uri?.let {
-                val bytes = compressImage(context.contentResolver, it)
-                onUploadImage("${UUID.randomUUID()}.jpg", bytes)
-            }
+    val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let {
+            val bytes = compressImage(context.contentResolver, it)
+            listener.onUploadImage("${UUID.randomUUID()}.jpg", bytes)
         }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0),
-        bottomBar = {
-            RecipeFormBottomBar(
-                isSaving = form.isSaving,
-                saveError = form.saveError,
-                canSave = form.canSave,
-                saveButtonLabel = saveButtonLabel,
-                onClick = onSaveClick,
+        topBar = {
+            FormTopBar(
+                title = topBarTitle,
+                onBackClick = {
+                    if (isDirty) showDiscardDialog = true else listener.onBackClick()
+                },
             )
+        },
+        snackbarHost = {
+            Box(Modifier.imePadding()) {
+                SnackbarHost(snackbarHostState)
+            }
         },
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
+                .padding(top = innerPadding.calculateTopPadding()),
         ) {
-            RecipeFormHeaderImage(
-                imageUrl = form.imageUrl,
-                isUploading = form.isUploadingImage,
-            )
-            RecipeFormContentList(
+            FormBody(
                 form = form,
-                bottomContentPadding = innerPadding.calculateBottomPadding(),
+                expandedEnumPicker = expandedEnumPicker,
+                onChangeExpandedPicker = { expandedEnumPicker = it },
                 onImageTap = { imageLauncher.launch("image/*") },
-                onTitleChange = onTitleChange,
-                onDescriptionChange = onDescriptionChange,
-                onBeansChange = onBeansChange,
-                onBrewMethodChipClick = { visibleEnumSheet = EnumSheet.BrewMethod },
-                onDifficultyChipClick = { visibleEnumSheet = EnumSheet.Difficulty },
-                onRoastLevelChipClick = { visibleEnumSheet = EnumSheet.RoastLevel },
-                onEditStep = onEditStep,
-                onDeleteStep = onDeleteStep,
-                onAddStep = onAddStep,
-                modifier = Modifier.fillMaxSize(),
+                listener = listener,
             )
-            RecipeFormTopBar(
+
+            SavePill(
+                label = saveButtonLabel,
+                canSave = form.canSave,
                 isSaving = form.isSaving,
-                onBackClick = { showDiscardDialog = true },
-                onSaveClick = onSaveClick,
-                modifier = Modifier.align(Alignment.TopCenter),
+                onClick = listener::onSaveClick,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(end = Spacing.xxl, bottom = Spacing.lg),
             )
         }
     }
 
-    // Enum pickers
-    val brewMethodOptions = BrewMethod.entries
-        .filterNot { it == BrewMethod.NONE }
-        .map { it to stringResource(it.labelRes()) }
-    val difficultyOptions = Difficulty.entries.map { it to stringResource(it.labelRes()) }
-    val roastLevelOptions = RoastLevel.entries
-        .filterNot { it == RoastLevel.NONE }
-        .map { it to stringResource(it.labelRes()) }
-
-    when (visibleEnumSheet) {
-        EnumSheet.BrewMethod -> OptionPickerBottomSheet(
-            title = stringResource(R.string.recipe_brew_method),
-            options = brewMethodOptions,
-            selected = form.brewMethod,
-            onSelect = { onBrewMethodChange(it); visibleEnumSheet = null },
-            onDismiss = { visibleEnumSheet = null },
-        )
-
-        EnumSheet.Difficulty -> OptionPickerBottomSheet(
-            title = stringResource(R.string.recipe_difficulty),
-            options = difficultyOptions,
-            selected = form.difficulty,
-            onSelect = { onDifficultyChange(it); visibleEnumSheet = null },
-            onDismiss = { visibleEnumSheet = null },
-        )
-
-        EnumSheet.RoastLevel -> OptionPickerBottomSheet(
-            title = stringResource(R.string.recipe_roast_level),
-            options = roastLevelOptions,
-            selected = form.roastLevel,
-            onSelect = { onRoastLevelChange(it); visibleEnumSheet = null },
-            onDismiss = { visibleEnumSheet = null },
-        )
-
-        null -> Unit
-    }
-
-    // Step edit sheet
-    form.activeStepSheet?.let { sheet ->
-        StepEditBottomSheet(
-            sheet = sheet,
-            onTitleChange = onActiveStepTitleChange,
-            onDurationMinutesChange = onActiveStepDurationMinutesChange,
-            onDurationSecondsChange = onActiveStepDurationSecondsChange,
-            onConfirm = onConfirmStepEdit,
-            onDismiss = onCancelStepEdit,
+    if (form.editingStep != null) {
+        StepEditorSheet(
+            draft = form.editingStep,
+            onTitleChange = listener::onDraftTitleChange,
+            onDurationChange = listener::onDraftDurationChange,
+            onConfirm = listener::onCommitDraft,
+            onDismiss = listener::onCancelDraft,
         )
     }
 
-    // Discard dialog
     if (showDiscardDialog) {
-        AlertDialog(
-            onDismissRequest = { showDiscardDialog = false },
-            title = { Text(stringResource(R.string.edit_recipe_discard_title)) },
-            text = { Text(stringResource(R.string.edit_recipe_discard_message)) },
-            confirmButton = {
-                TextButton(onClick = { showDiscardDialog = false; onBackClick() }) {
-                    Text(
-                        text = stringResource(R.string.edit_recipe_discard_confirm),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
+        DiscardDialog(
+            isCreateMode = isCreateMode,
+            onConfirm = {
+                showDiscardDialog = false
+                listener.onBackClick()
             },
-            dismissButton = {
-                TextButton(onClick = { showDiscardDialog = false }) {
-                    Text(stringResource(R.string.edit_recipe_keep_editing))
-                }
-            },
+            onDismiss = { showDiscardDialog = false },
         )
     }
 }
 
 @Composable
-internal fun RecipeFormHeaderImage(
+private fun FormBody(
+    form: RecipeFormFields,
+    expandedEnumPicker: ExpandedEnumPicker?,
+    onChangeExpandedPicker: (ExpandedEnumPicker?) -> Unit,
+    onImageTap: () -> Unit,
+    listener: RecipeFormListener,
+) {
+    val listState = rememberLazyListState()
+    val stepIds = remember(form.steps) { form.steps.mapTo(HashSet()) { it.id } }
+    val reorderState = rememberReorderState(listState) { fromKey, toKey ->
+        val from = form.steps.indexOfFirst { it.id == fromKey }
+        val to = form.steps.indexOfFirst { it.id == toKey }
+        if (from >= 0 && to >= 0) listener.onReorderSteps(from, to)
+    }
+
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = SaveButtonHeight + Spacing.xxxl * 2),
+    ) {
+        item(key = "hero") {
+            HeroImage(
+                imageUrl = form.imageUrl,
+                isUploading = form.isUploadingImage,
+                onChange = onImageTap,
+                onRemove = listener::onRemoveImage,
+            )
+        }
+        formSectionsItems(
+            form = form,
+            expandedEnumPicker = expandedEnumPicker,
+            onChangeExpandedPicker = onChangeExpandedPicker,
+            listener = listener,
+        )
+        stepsItems(
+            form = form,
+            reorderState = reorderState,
+            isSwappable = { key -> key in stepIds },
+            listener = listener,
+        )
+    }
+}
+
+private fun LazyListScope.formSectionsItems(
+    form: RecipeFormFields,
+    expandedEnumPicker: ExpandedEnumPicker?,
+    onChangeExpandedPicker: (ExpandedEnumPicker?) -> Unit,
+    listener: RecipeFormListener,
+) {
+    item(key = "title") {
+        Box(modifier = Modifier.padding(horizontal = SectionHorizontalPadding, vertical = Spacing.sm)) {
+            TitleField(value = form.title, onChange = listener::onTitleChange)
+        }
+    }
+    item(key = "description") {
+        Box(modifier = Modifier.padding(horizontal = SectionHorizontalPadding, vertical = Spacing.sm)) {
+            DescriptionField(value = form.description, onChange = listener::onDescriptionChange)
+        }
+    }
+    item(key = "params") {
+        Box(modifier = Modifier.padding(horizontal = SectionHorizontalPadding, vertical = Spacing.sm)) {
+            ParametersSection(
+                form = form,
+                expandedPicker = expandedEnumPicker,
+                onChipClick = { picker ->
+                    onChangeExpandedPicker(if (expandedEnumPicker == picker) null else picker)
+                },
+                onBrewMethodChange = {
+                    listener.onBrewMethodChange(it)
+                    onChangeExpandedPicker(null)
+                },
+                onDifficultyChange = {
+                    listener.onDifficultyChange(it)
+                    onChangeExpandedPicker(null)
+                },
+                onRoastLevelChange = {
+                    listener.onRoastLevelChange(it)
+                    onChangeExpandedPicker(null)
+                },
+            )
+        }
+    }
+    item(key = "beans") {
+        Box(modifier = Modifier.padding(horizontal = SectionHorizontalPadding, vertical = Spacing.sm)) {
+            BeansField(value = form.beans, onChange = listener::onBeansChange)
+        }
+    }
+    item(key = "steps-header") {
+        Box(
+            modifier = Modifier.padding(
+                horizontal = SectionHorizontalPadding,
+                vertical = Spacing.md,
+            ),
+        ) {
+            Text(
+                text = stringResource(R.string.recipe_brewing_steps),
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+private fun LazyListScope.stepsItems(
+    form: RecipeFormFields,
+    reorderState: ReorderState,
+    isSwappable: (Any) -> Boolean,
+    listener: RecipeFormListener,
+) {
+    items(items = form.steps, key = { it.id }) { step ->
+        val currentIndex = form.steps.indexOfFirst { it.id == step.id }
+        if (currentIndex < 0) return@items
+
+        val isDragging = reorderState.isDragging(step.id)
+        val rowModifier = Modifier
+            .zIndex(if (isDragging) 1f else 0f)
+            .then(
+                if (isDragging) {
+                    Modifier.graphicsLayer { translationY = reorderState.draggingItemOffsetY }
+                } else {
+                    Modifier.animateItem()
+                },
+            )
+            .padding(horizontal = SectionHorizontalPadding, vertical = Spacing.xs)
+
+        StepRow(
+            step = step,
+            index = currentIndex,
+            isDragging = isDragging,
+            onTap = { listener.onOpenEditStep(currentIndex) },
+            onRemove = { listener.onRemoveStep(currentIndex) },
+            modifier = rowModifier,
+            onDragStart = { reorderState.onDragStart(step.id) },
+            onDrag = { dy -> reorderState.onDrag(dy, isSwappable) },
+            onDragEnd = { reorderState.onDragEnd() },
+        )
+    }
+
+    item(key = "add-step") {
+        Box(
+            modifier = Modifier.padding(
+                horizontal = SectionHorizontalPadding,
+                vertical = Spacing.md,
+            ),
+        ) {
+            AddStepButton(onClick = listener::onOpenAddStep)
+        }
+    }
+}
+
+@Composable
+private fun HeroImage(
     imageUrl: String?,
     isUploading: Boolean,
-    modifier: Modifier = Modifier,
+    onChange: () -> Unit,
+    onRemove: () -> Unit,
 ) {
     Box(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .height(RecipeFormHeaderHeight),
+            .height(HeroHeight)
+            .clickable(enabled = !isUploading, onClick = onChange),
     ) {
         if (imageUrl != null) {
             AsyncImage(
@@ -293,13 +407,14 @@ internal fun RecipeFormHeaderImage(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            MaterialTheme.colorScheme.background.copy(alpha = 0.04f),
-                            MaterialTheme.colorScheme.background.copy(alpha = 0.16f),
-                            MaterialTheme.colorScheme.background.copy(alpha = 0.4f),
-                        )
-                    )
-                )
+                            Color.Black.copy(alpha = 0.04f),
+                            Color.Black.copy(alpha = 0.16f),
+                            Color.Black.copy(alpha = 0.4f),
+                        ),
+                    ),
+                ),
         )
+
         if (isUploading) {
             Box(
                 modifier = Modifier
@@ -319,12 +434,32 @@ internal fun RecipeFormHeaderImage(
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
                 ) {
                     Icon(
-                        imageVector = AppIcons.Regular.Camera,
-                        contentDescription = "choose photo",
+                        painter = painterResource(R.drawable.ic_image),
+                        contentDescription = stringResource(R.string.edit_recipe_image_change),
                         tint = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier
-                            .padding(8.dp)
-                            .size(24.dp),
+                            .padding(Spacing.sm)
+                            .size(28.dp),
+                    )
+                }
+            }
+
+            if (imageUrl != null) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(Spacing.md)
+                        .clickable(onClick = onRemove),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_close),
+                        contentDescription = stringResource(R.string.edit_recipe_image_remove),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .padding(Spacing.sm)
+                            .size(20.dp),
                     )
                 }
             }
@@ -333,322 +468,85 @@ internal fun RecipeFormHeaderImage(
 }
 
 @Composable
-internal fun RecipeFormTopBar(
-    isSaving: Boolean,
+private fun FormTopBar(
+    title: String,
     onBackClick: () -> Unit,
-    onSaveClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
             .statusBarsPadding()
-            .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .padding(horizontal = Spacing.sm, vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-
-        ActionButton(
-            image = AppIcons.Regular.ArrowLeft,
-            onClick = onBackClick,
-            contentDescription = stringResource(R.string.back_label)
-        )
-
-        ActionButton(
-            image = AppIcons.Regular.FloppyDiskBack,
-            onClick = onSaveClick,
-            contentDescription = stringResource(R.string.back_label),
-            enabled = !isSaving,
-        )
-    }
-}
-
-@Composable
-private fun ActionButton(
-    image: ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    contentDescription: String? = null,
-    tint: Color = MaterialTheme.colorScheme.tertiary
-) {
-    IconButton(onClick, modifier, enabled = enabled) {
-        Icon(
-            imageVector = image,
-            contentDescription = contentDescription,
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(8.dp),
-            tint = tint
-        )
-    }
-}
-
-@Composable
-internal fun RecipeFormContentList(
-    form: RecipeFormFields,
-    bottomContentPadding: Dp,
-    onImageTap: () -> Unit,
-    onTitleChange: (String) -> Unit,
-    onDescriptionChange: (String) -> Unit,
-    onBeansChange: (String) -> Unit,
-    onBrewMethodChipClick: () -> Unit,
-    onDifficultyChipClick: () -> Unit,
-    onRoastLevelChipClick: () -> Unit,
-    onEditStep: (Int) -> Unit,
-    onDeleteStep: (Int) -> Unit,
-    onAddStep: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    LazyColumn(
-        modifier = modifier.imePadding(),
-        contentPadding = PaddingValues(bottom = Spacing.xxxl + bottomContentPadding),
-        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
-    ) {
-        item {
-            Box(
-                modifier = Modifier
-                    .height(RecipeFormHeaderHeight - RecipeFormHeaderOverlap)
-                    .fillMaxWidth()
-                    .clickable(enabled = !form.isUploadingImage, onClick = onImageTap),
+        IconButton(onClick = onBackClick) {
+            Icon(
+                painter = painterResource(R.drawable.ic_arrow_left),
+                contentDescription = stringResource(R.string.back_label),
+                tint = MaterialTheme.colorScheme.onSurface,
             )
         }
-        item {
-            RecipeFormMainContent(
-                form = form,
-                onTitleChange = onTitleChange,
-                onDescriptionChange = onDescriptionChange,
-                onBeansChange = onBeansChange,
-                onBrewMethodChipClick = onBrewMethodChipClick,
-                onDifficultyChipClick = onDifficultyChipClick,
-                onRoastLevelChipClick = onRoastLevelChipClick,
-                onEditStep = onEditStep,
-                onDeleteStep = onDeleteStep,
-                onAddStep = onAddStep,
-            )
-        }
-    }
-}
-
-@Composable
-private fun RecipeFormMainContent(
-    form: RecipeFormFields,
-    onTitleChange: (String) -> Unit,
-    onDescriptionChange: (String) -> Unit,
-    onBeansChange: (String) -> Unit,
-    onBrewMethodChipClick: () -> Unit,
-    onDifficultyChipClick: () -> Unit,
-    onRoastLevelChipClick: () -> Unit,
-    onEditStep: (Int) -> Unit,
-    onDeleteStep: (Int) -> Unit,
-    onAddStep: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RecipeFormContentShape)
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = Spacing.xxl, vertical = Spacing.xxl),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xl),
-    ) {
-        RecipeFormTitleField(title = form.title, onTitleChange = onTitleChange)
-        RecipeFormDescriptionField(
-            description = form.description,
-            onDescriptionChange = onDescriptionChange
-        )
-        RecipeFormMetaSection(
-            form = form,
-            onBeansChange = onBeansChange,
-            onBrewMethodChipClick = onBrewMethodChipClick,
-            onDifficultyChipClick = onDifficultyChipClick,
-            onRoastLevelChipClick = onRoastLevelChipClick,
-        )
-        RecipeFormStepsSection(
-            steps = form.steps,
-            onEditStep = onEditStep,
-            onDeleteStep = onDeleteStep,
-            onAddStep = onAddStep,
-        )
-    }
-}
-
-@Composable
-private fun RecipeFormTitleField(title: String, onTitleChange: (String) -> Unit) {
-    BasicTextField(
-        value = title,
-        onValueChange = onTitleChange,
-        textStyle = MaterialTheme.typography.headlineLarge.copy(
-            color = MaterialTheme.colorScheme.onSurface,
-        ),
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        modifier = Modifier.fillMaxWidth(),
-        decorationBox = { innerTextField ->
-            Box {
-                if (title.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.edit_recipe_title_hint),
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                    )
-                }
-                innerTextField()
-            }
-        },
-    )
-}
-
-@Composable
-private fun RecipeFormDescriptionField(description: String, onDescriptionChange: (String) -> Unit) {
-    BasicTextField(
-        value = description,
-        onValueChange = onDescriptionChange,
-        textStyle = MaterialTheme.typography.bodyLarge.copy(
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        ),
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        modifier = Modifier.fillMaxWidth(),
-        decorationBox = { innerTextField ->
-            Box {
-                if (description.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.edit_recipe_description_hint),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                    )
-                }
-                innerTextField()
-            }
-        },
-    )
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun RecipeFormMetaSection(
-    form: RecipeFormFields,
-    onBeansChange: (String) -> Unit,
-    onBrewMethodChipClick: () -> Unit,
-    onDifficultyChipClick: () -> Unit,
-    onRoastLevelChipClick: () -> Unit,
-) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        EditableEnumChip(
-            title = stringResource(R.string.recipe_brew_method),
-            value = stringResource(form.brewMethod.labelRes()),
-            isHighlighted = true,
-            onClick = onBrewMethodChipClick,
-        )
-        EditableEnumChip(
-            title = stringResource(R.string.recipe_difficulty),
-            value = stringResource(form.difficulty.labelRes()),
-            onClick = onDifficultyChipClick,
-        )
-        if (form.roastLevel != RoastLevel.NONE) {
-            EditableEnumChip(
-                title = stringResource(R.string.recipe_roast_level),
-                value = stringResource(form.roastLevel.labelRes()),
-                onClick = onRoastLevelChipClick,
-            )
-        } else {
-            EditableEnumChip(
-                title = stringResource(R.string.recipe_roast_level),
-                value = stringResource(R.string.recipe_missing_value),
-                onClick = onRoastLevelChipClick,
-            )
-        }
-        EditableBeansChip(beans = form.beans, onBeansChange = onBeansChange)
-    }
-}
-
-@Composable
-private fun EditableEnumChip(
-    title: String,
-    value: String,
-    onClick: () -> Unit,
-    isHighlighted: Boolean = false,
-) {
-    val backgroundColor = if (isHighlighted) {
-        MaterialTheme.colorScheme.tertiaryContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceContainer
-    }
-    val titleColor = if (isHighlighted) {
-        MaterialTheme.colorScheme.tertiary
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    Column(
-        modifier = Modifier
-            .clip(MetaChipShape)
-            .background(backgroundColor)
-            .clickable(onClick = onClick)
-            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-    ) {
+        Spacer(Modifier.size(Spacing.xs))
         Text(
             text = title,
-            style = MaterialTheme.typography.labelSmall,
-            color = titleColor,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
         )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-
-            Icon(
-                imageVector = AppIcons.Regular.Pencil,
-                contentDescription = "edit",
-                modifier = Modifier
-                    .padding(start = 4.dp)
-                    .size(16.dp)
-            )
-        }
     }
 }
 
 @Composable
-private fun EditableBeansChip(beans: String, onBeansChange: (String) -> Unit) {
-    Column(
-        modifier = Modifier
-            .clip(MetaChipShape)
+private fun EditableFieldBox(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(FieldShape)
             .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            .padding(horizontal = Spacing.md, vertical = Spacing.md),
     ) {
-        Text(
-            text = stringResource(R.string.recipe_beans),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        content()
+        Icon(
+            painter = painterResource(R.drawable.ic_edit),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = Spacing.xs, end = Spacing.xs)
+                .size(16.dp),
         )
+    }
+}
+
+@Composable
+private fun TitleField(value: String, onChange: (String) -> Unit) {
+    EditableFieldBox {
         BasicTextField(
-            value = beans,
-            onValueChange = onBeansChange,
-            textStyle = MaterialTheme.typography.titleSmall.copy(
+            value = value,
+            onValueChange = onChange,
+            textStyle = MaterialTheme.typography.headlineMedium.copy(
                 color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
             ),
-            singleLine = true,
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            modifier = Modifier.defaultMinSize(minWidth = 80.dp),
-            decorationBox = { innerTextField ->
+            modifier = Modifier.fillMaxWidth(),
+            decorationBox = { inner ->
                 Box {
-                    if (beans.isEmpty()) {
+                    if (value.isEmpty()) {
                         Text(
-                            text = stringResource(R.string.edit_recipe_beans_hint),
-                            style = MaterialTheme.typography.titleSmall,
+                            text = requiredLabel(stringResource(R.string.edit_recipe_title_hint)),
+                            style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                         )
                     }
-                    innerTextField()
+                    inner()
                 }
             },
         )
@@ -656,103 +554,334 @@ private fun EditableBeansChip(beans: String, onBeansChange: (String) -> Unit) {
 }
 
 @Composable
-internal fun RecipeFormStepsSection(
-    steps: List<RecipeFormStepUiModel>,
-    onEditStep: (Int) -> Unit,
-    onDeleteStep: (Int) -> Unit,
-    onAddStep: () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-        Text(
-            text = stringResource(R.string.recipe_brewing_steps),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Column {
-            steps.forEachIndexed { index, step ->
-                EditableStepItem(
-                    step = step,
-                    stepNumber = index + 1,
-                    onEditClick = { onEditStep(index) },
-                    onDeleteClick = { onDeleteStep(index) },
-                )
-                if (index != steps.lastIndex) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = StepNumberSize + Spacing.md),
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
+private fun DescriptionField(value: String, onChange: (String) -> Unit) {
+    EditableFieldBox {
+        BasicTextField(
+            value = value,
+            onValueChange = onChange,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                color = MaterialTheme.colorScheme.onSurface,
+            ),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            modifier = Modifier.fillMaxWidth(),
+            decorationBox = { inner ->
+                Box {
+                    if (value.isEmpty()) {
+                        Text(
+                            text = requiredLabel(stringResource(R.string.edit_recipe_description_hint)),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                        )
+                    }
+                    inner()
                 }
-            }
-        }
-        AddStepButton(onClick = onAddStep)
+            },
+        )
     }
 }
 
 @Composable
-private fun EditableStepItem(
-    step: RecipeFormStepUiModel,
-    stepNumber: Int,
-    onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Spacing.md))
-            .clickable(onClick = onEditClick)
-            .padding(vertical = Spacing.md),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(StepNumberSize)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stepNumber.toString(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+private fun BeansField(value: String, onChange: (String) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Text(
+            text = stringResource(R.string.recipe_beans),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        EditableFieldBox {
+            BasicTextField(
+                value = value,
+                onValueChange = onChange,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                    color = MaterialTheme.colorScheme.onSurface,
+                ),
+                singleLine = true,
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                modifier = Modifier.fillMaxWidth(),
+                decorationBox = { inner ->
+                    Box {
+                        if (value.isEmpty()) {
+                            Text(
+                                text = stringResource(R.string.edit_recipe_beans_hint),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                            )
+                        }
+                        inner()
+                    }
+                },
             )
         }
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    }
+}
+
+@Composable
+private fun ParametersSection(
+    form: RecipeFormFields,
+    expandedPicker: ExpandedEnumPicker?,
+    onChipClick: (ExpandedEnumPicker) -> Unit,
+    onBrewMethodChange: (BrewMethod) -> Unit,
+    onDifficultyChange: (Difficulty) -> Unit,
+    onRoastLevelChange: (RoastLevel) -> Unit,
+) {
+    Column(
+        modifier = Modifier.animateContentSize(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            Text(
-                text = step.title,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface,
+            EnumChip(
+                modifier = Modifier.weight(1f),
+                title = stringResource(R.string.recipe_brew_method),
+                value = stringResource(form.brewMethod.labelRes()),
+                isActive = expandedPicker == ExpandedEnumPicker.BrewMethod,
+                onClick = { onChipClick(ExpandedEnumPicker.BrewMethod) },
             )
-            if (step.description.isNotBlank()) {
+            EnumChip(
+                modifier = Modifier.weight(1f),
+                title = stringResource(R.string.recipe_difficulty),
+                value = stringResource(form.difficulty.labelRes()),
+                isActive = expandedPicker == ExpandedEnumPicker.Difficulty,
+                onClick = { onChipClick(ExpandedEnumPicker.Difficulty) },
+            )
+            EnumChip(
+                modifier = Modifier.weight(1f),
+                title = stringResource(R.string.recipe_roast_level),
+                value = if (form.roastLevel == RoastLevel.NONE) {
+                    stringResource(R.string.recipe_missing_value)
+                } else {
+                    stringResource(form.roastLevel.labelRes())
+                },
+                isActive = expandedPicker == ExpandedEnumPicker.RoastLevel,
+                onClick = { onChipClick(ExpandedEnumPicker.RoastLevel) },
+            )
+        }
+
+        if (expandedPicker != null) {
+            ExpandedPickerSection(
+                picker = expandedPicker,
+                form = form,
+                onBrewMethodChange = onBrewMethodChange,
+                onDifficultyChange = onDifficultyChange,
+                onRoastLevelChange = onRoastLevelChange,
+            )
+        }
+    }
+}
+
+@Composable
+private fun EnumChip(
+    title: String,
+    value: String,
+    isActive: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val background = if (isActive) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainer
+    }
+    val titleColor = if (isActive) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val valueColor = if (isActive) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+
+    Column(
+        modifier = modifier
+            .heightIn(min = ChipMinHeight)
+            .clip(MaterialTheme.shapes.large)
+            .background(background)
+            .clickable(onClick = onClick)
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+            ),
+            color = titleColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleSmall,
+            color = valueColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun ExpandedPickerSection(
+    picker: ExpandedEnumPicker,
+    form: RecipeFormFields,
+    onBrewMethodChange: (BrewMethod) -> Unit,
+    onDifficultyChange: (Difficulty) -> Unit,
+    onRoastLevelChange: (RoastLevel) -> Unit,
+) {
+    when (picker) {
+        ExpandedEnumPicker.BrewMethod -> {
+            val options = BrewMethod.entries
+                .filterNot { it == BrewMethod.NONE }
+                .map { ChipOption(it, stringResource(it.labelRes())) }
+            ChipCarouselPicker(
+                options = options,
+                selected = form.brewMethod,
+                onSelect = onBrewMethodChange,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        ExpandedEnumPicker.Difficulty -> {
+            val options = Difficulty.entries
+                .map { ChipOption(it, stringResource(it.labelRes())) }
+            ChipCarouselPicker(
+                options = options,
+                selected = form.difficulty,
+                onSelect = onDifficultyChange,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        ExpandedEnumPicker.RoastLevel -> {
+            val options = RoastLevel.entries
+                .filterNot { it == RoastLevel.NONE }
+                .map { value ->
+                    ChipOption(value, stringResource(value.labelRes()), fillTint = roastTint(value))
+                }
+            ChipCarouselPicker(
+                options = options,
+                selected = form.roastLevel,
+                onSelect = onRoastLevelChange,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun StepRow(
+    step: RecipeFormStepUiModel,
+    index: Int,
+    isDragging: Boolean,
+    onTap: () -> Unit,
+    onRemove: () -> Unit,
+    onDragStart: () -> Unit,
+    onDrag: (dragDelta: Float) -> Unit,
+    onDragEnd: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val haptic = LocalHapticFeedback.current
+    val elevation by animateFloatAsState(
+        targetValue = if (isDragging) 8f else 0f,
+        label = "stepElevation",
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = StepRowMinHeight)
+            .shadow(elevation.dp, StepShape)
+            .clip(StepShape)
+            .background(
+                if (isDragging) MaterialTheme.colorScheme.surfaceContainerHigh
+                else MaterialTheme.colorScheme.surfaceContainer
+            )
+            .clickable(onClick = onTap),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.sm, vertical = Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DragHandle(
+                modifier = Modifier.pointerInput(step.id) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onDragStart()
+                        },
+                        onDragEnd = { onDragEnd() },
+                        onDragCancel = { onDragEnd() },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            onDrag(dragAmount.y)
+                        },
+                    )
+                },
+            )
+            StepNumberCircle(number = index + 1)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
                 Text(
-                    text = step.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = step.title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                step.durationSeconds?.let { duration ->
+                    StepDurationChip(duration = formatStepDuration(duration))
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f))
+                    .clickable(onClick = onRemove)
+                    .padding(Spacing.sm),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_trash),
+                    contentDescription = stringResource(R.string.edit_recipe_step_delete),
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.size(22.dp),
                 )
             }
-            step.durationSeconds?.let { duration ->
-                StepDurationChip(duration = formatStepDuration(duration))
-            }
         }
-        Box(
-            modifier = Modifier
-                .clip(CircleShape)
-                .clickable(onClick = onDeleteClick)
-                .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = AppIcons.Regular.TrashSimple,
-                contentDescription = "remove step",
-                modifier = Modifier
-                    .padding(8.dp)
-                    .size(16.dp)
-            )
-        }
+    }
+}
+
+@Composable
+private fun DragHandle(modifier: Modifier = Modifier) {
+    Icon(
+        painter = painterResource(R.drawable.ic_drag_handle),
+        contentDescription = stringResource(R.string.edit_recipe_step_drag_handle),
+        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+        modifier = modifier
+            .padding(2.dp)
+            .size(28.dp),
+    )
+}
+
+@Composable
+private fun StepNumberCircle(number: Int) {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = number.toString(),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -760,7 +889,7 @@ private fun EditableStepItem(
 private fun StepDurationChip(duration: String) {
     Box(
         modifier = Modifier
-            .clip(StepDurationShape)
+            .clip(DurationChipShape)
             .background(MaterialTheme.colorScheme.tertiaryContainer)
             .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
     ) {
@@ -776,10 +905,8 @@ private fun StepDurationChip(duration: String) {
 private fun AddStepButton(onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(PrimaryButtonHeight),
-        shape = ShapeXxl,
+        modifier = Modifier.fillMaxWidth(),
+        shape = StepShape,
     ) {
         Text(
             text = stringResource(R.string.edit_recipe_add_step),
@@ -789,213 +916,415 @@ private fun AddStepButton(onClick: () -> Unit) {
 }
 
 @Composable
-internal fun RecipeFormBottomBar(
-    isSaving: Boolean,
-    saveError: Boolean,
+private fun SavePill(
+    label: String,
     canSave: Boolean,
-    saveButtonLabel: String,
+    isSaving: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                brush = Brush.verticalGradient(
-                    colorStops = arrayOf(
-                        0.0f to MaterialTheme.colorScheme.surface.copy(alpha = 0f),
-                        0.32f to MaterialTheme.colorScheme.surface.copy(alpha = 0.48f),
-                        0.62f to MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
-                        1.0f to MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-                    )
-                )
+    Button(
+        onClick = onClick,
+        enabled = canSave,
+        modifier = modifier
+            .defaultMinSize(minWidth = 140.dp)
+            .height(SaveButtonHeight),
+        shape = ShapeXxl,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+        ),
+        contentPadding = PaddingValues(horizontal = Spacing.xxl),
+    ) {
+        if (isSaving) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                color = MaterialTheme.colorScheme.onPrimary,
+                strokeWidth = 2.dp,
             )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(start = Spacing.xxl, end = Spacing.xxl, bottom = Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            if (saveError) {
-                Text(
-                    text = stringResource(R.string.edit_recipe_save_error),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            Button(
-                onClick = onClick,
-                enabled = canSave,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(PrimaryButtonHeight),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-                shape = ShapeXxl,
-            ) {
-                if (isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp,
-                    )
-                } else {
-                    Text(
-                        text = saveButtonLabel,
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-            }
+        } else {
+            Text(text = label, style = MaterialTheme.typography.labelLarge)
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun <T> OptionPickerBottomSheet(
-    title: String,
-    options: List<Pair<T, String>>,
-    selected: T,
-    onSelect: (T) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    RoastiBottomSheet(
-        onDismiss = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(horizontal = Spacing.xxl, vertical = Spacing.lg),
-        )
-        options.forEach { (value, label) ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSelect(value) }
-                    .padding(horizontal = Spacing.xxl, vertical = Spacing.md),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (value == selected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                )
-                if (value == selected) {
-                    Icon(
-                        imageVector = AppIcons.Regular.Check,
-                        contentDescription = "checked",
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun StepEditBottomSheet(
-    sheet: ActiveStepSheet,
+private fun StepEditorSheet(
+    draft: StepDraft,
     onTitleChange: (String) -> Unit,
-    onDurationMinutesChange: (String) -> Unit,
-    onDurationSecondsChange: (String) -> Unit,
+    onDurationChange: (Int) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    val hideThen: (() -> Unit) -> Unit = { action ->
+        scope.launch { sheetState.hide() }.invokeOnCompletion {
+            if (!sheetState.isVisible) action()
+        }
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.xxl)
-                .navigationBarsPadding()
-                .imePadding(),
-            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
-        ) {
+        StepEditorSheetContent(
+            draft = draft,
+            onTitleChange = onTitleChange,
+            onDurationChange = onDurationChange,
+            onConfirm = { hideThen(onConfirm) },
+            onDismiss = { hideThen(onDismiss) },
+        )
+    }
+}
+
+@Composable
+private fun StepEditorSheetContent(
+    draft: StepDraft,
+    onTitleChange: (String) -> Unit,
+    onDurationChange: (Int) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.xxl)
+            .navigationBarsPadding()
+            .imePadding(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+    ) {
+        Text(
+            text = if (draft.editingIndex != null) {
+                stringResource(R.string.edit_recipe_step_edit_title)
+            } else {
+                stringResource(R.string.edit_recipe_step_add_title)
+            },
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Text(
-                text = if (sheet.editingIndex != null) {
-                    stringResource(R.string.edit_recipe_step_edit_title)
-                } else {
-                    stringResource(R.string.edit_recipe_step_add_title)
-                },
-                style = MaterialTheme.typography.titleLarge,
+                text = requiredLabel(stringResource(R.string.edit_recipe_step_title_label)),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            OutlinedTextField(
-                value = sheet.title,
-                onValueChange = onTitleChange,
-                label = { Text(stringResource(R.string.edit_recipe_step_title_label) + " *") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                verticalAlignment = Alignment.CenterVertically,
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(FieldShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .padding(horizontal = Spacing.md, vertical = Spacing.md),
             ) {
-                OutlinedTextField(
-                    value = sheet.durationMinutes,
-                    onValueChange = {
-                        if (it.length <= 2 && it.all(Char::isDigit)) onDurationMinutesChange(
-                            it
-                        )
-                    },
-                    label = { Text(stringResource(R.string.edit_recipe_step_duration_min)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                BasicTextField(
+                    value = draft.title,
+                    onValueChange = onTitleChange,
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     singleLine = true,
-                    modifier = Modifier.width(88.dp),
-                )
-                OutlinedTextField(
-                    value = sheet.durationSeconds,
-                    onValueChange = {
-                        if (it.length <= 2 && it.all(Char::isDigit)) onDurationSecondsChange(
-                            it
-                        )
+                    modifier = Modifier.fillMaxWidth(),
+                    decorationBox = { inner ->
+                        Box {
+                            if (draft.title.isEmpty()) {
+                                Text(
+                                    text = stringResource(R.string.edit_recipe_step_title_hint),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                                )
+                            }
+                            inner()
+                        }
                     },
-                    label = { Text(stringResource(R.string.edit_recipe_step_duration_sec)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.width(88.dp),
                 )
-                Spacer(modifier = Modifier.weight(1f))
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Text(
+                text = stringResource(R.string.edit_recipe_step_duration),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TimeWheelPicker(
+                totalSeconds = draft.durationSeconds,
+                onTotalSecondsChange = onDurationChange,
+                minuteStep = 1,
+                secondStep = 5,
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f).height(SaveButtonHeight),
+                shape = ShapeXxl,
+            ) {
+                Text(
+                    text = stringResource(R.string.edit_recipe_discard_confirm),
+                    style = MaterialTheme.typography.labelLarge,
+                )
             }
             Button(
                 onClick = onConfirm,
-                enabled = sheet.canConfirm,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(PrimaryButtonHeight),
+                enabled = draft.canConfirm,
+                modifier = Modifier.weight(1f).height(SaveButtonHeight),
+                shape = ShapeXxl,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                 ),
-                shape = ShapeXxl,
             ) {
                 Text(
-                    text = stringResource(R.string.edit_recipe_step_save),
+                    text = stringResource(R.string.edit_recipe_step_done),
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
-            Spacer(Modifier.height(Spacing.md))
         }
+
+        Spacer(Modifier.height(Spacing.md))
     }
+}
+
+@Composable
+private fun DiscardDialog(
+    isCreateMode: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val titleRes = if (isCreateMode) {
+        R.string.edit_recipe_discard_create_title
+    } else {
+        R.string.edit_recipe_discard_title
+    }
+    val messageRes = if (isCreateMode) {
+        R.string.edit_recipe_discard_create_message
+    } else {
+        R.string.edit_recipe_discard_message
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(titleRes)) },
+        text = { Text(stringResource(messageRes)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = stringResource(R.string.edit_recipe_discard_confirm),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.edit_recipe_keep_editing))
+            }
+        },
+    )
+}
+
+private fun roastTint(level: RoastLevel): Color = when (level) {
+    RoastLevel.Light -> Sand200
+    RoastLevel.MediumLight -> Sand300
+    RoastLevel.Medium -> Sand500
+    RoastLevel.MediumDark -> Sand600
+    RoastLevel.Dark -> Sand700
+    RoastLevel.NONE -> Color.Transparent
 }
 
 internal fun formatStepDuration(totalSeconds: Int): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return "%d:%02d".format(minutes, seconds)
+}
+
+@Composable
+private fun rememberReorderState(
+    listState: LazyListState,
+    onSwap: (fromKey: Any, toKey: Any) -> Unit,
+): ReorderState {
+    val onSwapState = rememberUpdatedState(onSwap)
+    val scope = rememberCoroutineScope()
+    return remember(listState) {
+        ReorderState(listState, scope) { from, to -> onSwapState.value(from, to) }
+    }
+}
+
+private class ReorderState(
+    private val listState: LazyListState,
+    private val scope: CoroutineScope,
+    private val onSwap: (Any, Any) -> Unit,
+) {
+    var draggingKey: Any? by mutableStateOf(null)
+        private set
+    private var draggedDelta: Float by mutableFloatStateOf(0f)
+    private var initialOffset: Float by mutableFloatStateOf(0f)
+    private var settleAnim: Animatable<Float, AnimationVector1D>? by mutableStateOf(null)
+    private var settleJob: Job? = null
+
+    private val draggingItemInfo: LazyListItemInfo?
+        get() = draggingKey?.let { key ->
+            listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }
+        }
+
+    val draggingItemOffsetY: Float
+        get() {
+            settleAnim?.let { return it.value }
+            val item = draggingItemInfo ?: return 0f
+            return (initialOffset + draggedDelta) - item.offset
+        }
+
+    fun isDragging(key: Any): Boolean = draggingKey == key
+
+    fun onDragStart(key: Any) {
+        settleJob?.cancel()
+        settleJob = null
+        settleAnim = null
+        val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key } ?: return
+        draggingKey = key
+        initialOffset = item.offset.toFloat()
+        draggedDelta = 0f
+    }
+
+    fun onDrag(dy: Float, isSwappable: (Any) -> Boolean) {
+        draggedDelta += dy
+        val item = draggingItemInfo ?: return
+        val draggedTop = item.offset + draggingItemOffsetY
+        val draggedMid = draggedTop + item.size / 2f
+        val target = listState.layoutInfo.visibleItemsInfo.firstOrNull { other ->
+            other.index != item.index &&
+                isSwappable(other.key) &&
+                draggedMid.toInt() in other.offset..(other.offset + other.size)
+        } ?: return
+        onSwap(item.key, target.key)
+    }
+
+    fun onDragEnd() {
+        val startValue = draggingItemOffsetY
+        if (startValue == 0f) {
+            clearDragState()
+            return
+        }
+        val anim = Animatable(startValue)
+        settleAnim = anim
+        settleJob = scope.launch {
+            try {
+                anim.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+            } finally {
+                if (settleAnim === anim) {
+                    settleAnim = null
+                    clearDragState()
+                }
+            }
+        }
+    }
+
+    private fun clearDragState() {
+        draggingKey = null
+        draggedDelta = 0f
+        initialOffset = 0f
+    }
+}
+
+private object PreviewListener : RecipeFormListener {
+    override fun onBackClick() = Unit
+    override fun onSaveClick() = Unit
+    override fun onTitleChange(value: String) = Unit
+    override fun onDescriptionChange(value: String) = Unit
+    override fun onBeansChange(value: String) = Unit
+    override fun onBrewMethodChange(value: BrewMethod) = Unit
+    override fun onDifficultyChange(value: Difficulty) = Unit
+    override fun onRoastLevelChange(value: RoastLevel) = Unit
+    override fun onUploadImage(fileName: String, bytes: ByteArray) = Unit
+    override fun onRemoveImage() = Unit
+    override fun onOpenAddStep() = Unit
+    override fun onOpenEditStep(index: Int) = Unit
+    override fun onDraftTitleChange(value: String) = Unit
+    override fun onDraftDurationChange(totalSeconds: Int) = Unit
+    override fun onCommitDraft() = Unit
+    override fun onCancelDraft() = Unit
+    override fun onRemoveStep(index: Int) = Unit
+    override fun onReorderSteps(fromIndex: Int, toIndex: Int) = Unit
+}
+
+@Preview(name = "Empty (Create)", showBackground = true, heightDp = 900)
+@Composable
+private fun RecipeFormScreenEmptyPreview() {
+    RoastiTheme {
+        RecipeFormScreen(
+            form = RecipeFormFields(),
+            topBarTitle = "Create recipe",
+            saveButtonLabel = "Create",
+            isDirty = false,
+            isCreateMode = true,
+            saveErrorEventTrigger = 0,
+            listener = PreviewListener,
+        )
+    }
+}
+
+@Preview(name = "Filled (Edit)", showBackground = true, heightDp = 1200)
+@Composable
+private fun RecipeFormScreenFilledPreview() {
+    RoastiTheme {
+        RecipeFormScreen(
+            form = RecipeFormFields(
+                title = "V60 Citrus Bloom",
+                description = "Bright, washed Ethiopian recipe with extended bloom for clarity.",
+                brewMethod = BrewMethod.V60,
+                difficulty = Difficulty.Medium,
+                roastLevel = RoastLevel.Light,
+                beans = "Yirgacheffe 15g, medium-fine grind",
+                steps = listOf(
+                    RecipeFormStepUiModel(
+                        title = "Bloom",
+                        durationSeconds = 45,
+                    ),
+                    RecipeFormStepUiModel(
+                        title = "First pour to 150g",
+                        durationSeconds = 30,
+                    ),
+                    RecipeFormStepUiModel(
+                        title = "Second pour to 250g",
+                        durationSeconds = 40,
+                    ),
+                    RecipeFormStepUiModel(
+                        title = "Drawdown",
+                        durationSeconds = 60,
+                    ),
+                ),
+            ),
+            topBarTitle = "Edit recipe",
+            saveButtonLabel = "Save",
+            isDirty = true,
+            isCreateMode = false,
+            saveErrorEventTrigger = 0,
+            listener = PreviewListener,
+        )
+    }
+}
+
+@Preview(name = "Uploading image", showBackground = true, heightDp = 900)
+@Composable
+private fun RecipeFormScreenUploadingPreview() {
+    RoastiTheme {
+        RecipeFormScreen(
+            form = RecipeFormFields(
+                title = "Aeropress inverted",
+                description = "Quick, dense cup.",
+                isUploadingImage = true,
+            ),
+            topBarTitle = "Create recipe",
+            saveButtonLabel = "Create",
+            isDirty = true,
+            isCreateMode = true,
+            saveErrorEventTrigger = 0,
+            listener = PreviewListener,
+        )
+    }
 }

@@ -14,10 +14,13 @@ data class RecipeFormFields(
     val roastLevel: RoastLevel = RoastLevel.NONE,
     val beans: String = "",
     val steps: List<RecipeFormStepUiModel> = emptyList(),
+    val editingStep: StepDraft? = null,
     val isUploadingImage: Boolean = false,
     val isSaving: Boolean = false,
-    val saveError: Boolean = false,
-    val activeStepSheet: ActiveStepSheet? = null,
 ) {
-    val canSave: Boolean get() = title.isNotBlank() && !isSaving
+    val canSave: Boolean
+        get() = title.isNotBlank() &&
+            description.isNotBlank() &&
+            !isSaving &&
+            editingStep == null
 }

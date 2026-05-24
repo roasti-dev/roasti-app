@@ -5,12 +5,11 @@ import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
 val RoastiShapes = Shapes(
-    extraSmall = RoundedCornerShape(4),   // radius-xs
-    small      = RoundedCornerShape(6),   // radius-sm
-    medium     = RoundedCornerShape(10),   // radius-md
-    large      = RoundedCornerShape(12),  // radius-lg (base)
-    extraLarge = RoundedCornerShape(15),  // radius-xl
+    extraSmall = RoundedCornerShape(4.dp),
+    small      = RoundedCornerShape(8.dp),
+    medium     = RoundedCornerShape(12.dp),
+    large      = RoundedCornerShape(16.dp),
+    extraLarge = RoundedCornerShape(28.dp),
 )
 
-// Use directly where needed (e.g. bottom sheet, modal)
-val ShapeXxl = RoundedCornerShape(24.dp)     // radius-3xl
+val ShapeXxl = RoundedCornerShape(24.dp)
