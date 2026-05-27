@@ -37,3 +37,24 @@ in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and r
 ---
 
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+
+---
+
+## Releases
+
+Android and server are released independently via component-prefixed tags. Each component has its own workflow and version.
+
+| Component | Tag format       | Workflow                                | Artifact         | Status      |
+|-----------|------------------|-----------------------------------------|------------------|-------------|
+| Android   | `android-v1.2.3` | `.github/workflows/release-android.yml` | signed APK       | active      |
+| Server    | `server-v1.2.3`  | `.github/workflows/release-server.yml`  | JVM distribution | planned     |
+
+Cut a release:
+```bash
+git tag android-v1.0.0 && git push origin android-v1.0.0
+# git tag server-v1.0.0 && git push origin server-v1.0.0   # once server workflow lands
+```
+
+Pushing the tag triggers the matching workflow: it builds the artifact, creates a GitHub Release, and posts to Telegram.
+
+Legacy `v*.*.*` tags (without suffix) no longer trigger a release — kept as history.

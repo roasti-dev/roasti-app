@@ -2,7 +2,7 @@ name: Google release apk
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'android-v*.*.*'
 jobs:
   Release_Apk:
     runs-on: ubuntu-latest
