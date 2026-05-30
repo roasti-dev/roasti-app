@@ -36,6 +36,7 @@ firebase-admin = "9.4.3"
 koin = "4.2.1"
 kotlin = "2.3.21"
 ktor = "3.4.3"
+skie = "0.10.12"
 spotless = "8.4.0"
 
 [libraries]
@@ -118,4 +119,5 @@ ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
 
 # Common plugins
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+skie = { id = "co.touchlab.skie", version.ref = "skie" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
