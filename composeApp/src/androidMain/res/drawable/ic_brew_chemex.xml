@@ -1,0 +1,38 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+
+    <!-- top funnel (flared) -->
+    <path
+        android:fillColor="#D3E1E9"
+        android:pathData="M29,31 C28,24 24,18 22,15 L42,15 C40,18 36,24 35,31 Z" />
+    <!-- bottom bulb -->
+    <path
+        android:fillColor="#D3E1E9"
+        android:pathData="M29,33 C22,35 19,42 22,48 C24,53 28,55 32,55 C36,55 40,53 42,48 C45,42 42,35 35,33 Z" />
+    <group>
+        <clip-path android:pathData="M29,33 C22,35 19,42 22,48 C24,53 28,55 32,55 C36,55 40,53 42,48 C45,42 42,35 35,33 Z" />
+        <path
+            android:fillColor="#B27C4F"
+            android:pathData="M19,46 C24,44 28,45 32,46 C36,47 40,46 45,46 L45,56 L19,56 Z" />
+        <path
+            android:fillColor="#8E5B36"
+            android:pathData="M19,51 H45 V56 H19 Z" />
+    </group>
+    <!-- wood collar -->
+    <path
+        android:fillColor="#A67B4C"
+        android:pathData="M27.5,29 H36.5 A1.5,1.5 0 0 1 38,30.5 V32.5 A1.5,1.5 0 0 1 36.5,34 H27.5 A1.5,1.5 0 0 1 26,32.5 V30.5 A1.5,1.5 0 0 1 27.5,29 Z" />
+    <path
+        android:strokeColor="#7E5A33"
+        android:strokeWidth="1.2"
+        android:pathData="M26.5,31.5 H37.5" />
+    <!-- top lip -->
+    <path
+        android:strokeColor="#33414B"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M24,14.5 H40" />
+</vector>

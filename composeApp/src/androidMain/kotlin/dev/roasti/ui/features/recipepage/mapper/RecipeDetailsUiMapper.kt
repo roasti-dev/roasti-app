@@ -3,6 +3,7 @@ package dev.roasti.ui.features.recipepage.mapper
 import dev.roasti.feature.recipe.domain.model.Recipe
 import dev.roasti.feature.recipe.domain.model.BrewStep
 import dev.roasti.feature.recipe.domain.model.RoastLevel
+import dev.roasti.ui.features.recipe.mapper.iconRes
 import dev.roasti.ui.features.recipe.mapper.labelRes
 import dev.roasti.ui.features.recipe.mapper.toUiModel
 import dev.roasti.ui.features.recipepage.model.RecipeDetailsUiModel
@@ -16,6 +17,7 @@ internal fun Recipe.toUiModel(currentUserId: String?) = RecipeDetailsUiModel(
     note = note,
     imageUrl = imageId?.let(::imageUrl),
     brewMethodLabelRes = brewMethod.labelRes(),
+    brewMethodIconRes = brewMethod.iconRes(),
     difficultyLabelRes = difficulty.labelRes(),
     roastLevelLabelRes = roastLevel.takeUnless { it == RoastLevel.NONE }?.labelRes(),
     beans = beans,

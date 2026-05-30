@@ -3,7 +3,9 @@ package dev.roasti.ui.features.recipepage
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -51,6 +54,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -79,6 +83,8 @@ import com.adamglin.phosphoricons.regular.ArrowLeft
 private val StickyTitleThresholdDp = 80.dp
 private val StepNumberSize = 28.dp
 private val StepDurationShape = RoundedCornerShape(10.dp)
+private val RecipeHeroHeight = 220.dp
+private val RecipeHeroIconSize = 132.dp
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -197,6 +203,10 @@ private fun RecipeContentBody(
                 .padding(top = innerPadding.calculateTopPadding())
                 .verticalScroll(scrollState),
         ) {
+            RecipeHero(
+                imageUrl = recipe.imageUrl,
+                brewMethodIconRes = recipe.brewMethodIconRes,
+            )
             RecipeHeaderSection(
                 recipe = recipe,
                 authorAvatarModifier = authorAvatarModifier,
@@ -281,6 +291,36 @@ private fun RecipeTopBar(
                     ),
                 ),
                 contentDescription = stringResource(R.string.recipe_owner_menu_more),
+            )
+        }
+    }
+}
+
+@Composable
+private fun RecipeHero(
+    imageUrl: String?,
+    @DrawableRes brewMethodIconRes: Int,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(RecipeHeroHeight)
+            .background(MaterialTheme.colorScheme.tertiaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (imageUrl != null) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            Image(
+                painter = painterResource(brewMethodIconRes),
+                contentDescription = null,
+                modifier = Modifier.size(RecipeHeroIconSize),
             )
         }
     }
@@ -548,6 +588,7 @@ private fun RecipeContentScreenPreview() {
                     description = "Clean and sweet cup with balanced acidity and a compact recipe flow that stays readable even with multiple brewing steps.",
                     imageUrl = null,
                     brewMethodLabelRes = R.string.recipe_brew_method_aeropress,
+                    brewMethodIconRes = R.drawable.ic_brew_aeropress,
                     difficultyLabelRes = R.string.recipe_difficulty_medium,
                     roastLevelLabelRes = R.string.recipe_roast_level_medium,
                     beans = "Colombian Supremo",

@@ -27,6 +27,7 @@
     <string name="recipe_brew_method">Brew Method</string>
     <string name="recipe_brew_method_all">All</string>
     <string name="recipes_search_hint">Search blends, roasts…</string>
+    <string name="recipes_search_clear">Clear search</string>
     <string name="recipes_empty_state">No recipes found</string>
     <string name="filter_clear">Clear</string>
     <string name="recipe_roaster">Roaster</string>

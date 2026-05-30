@@ -1,17 +1,15 @@
 package dev.roasti.ui.features.favorites.widgets
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -26,14 +24,14 @@ import com.adamglin.phosphoricons.Regular
 import com.adamglin.phosphoricons.regular.ArrowRight
 import dev.roasti.R
 import dev.roasti.ui.features.favorites.model.FavoritesPreviewState
+import dev.roasti.ui.features.recipelist.components.CompactCardSize
 import dev.roasti.ui.features.recipelist.components.RecipeCompactCard
 import dev.roasti.ui.features.recipelist.model.RecipeListItemUiModel
 import dev.roasti.ui.theme.Spacing
 import dev.roasti.ui.uikit.LoadingStub
 import dev.roasti.ui.uikit.TextCard
 
-private val PreviewCardWidth = 200.dp
-private val PreviewCardHeight = 150.dp
+private val PreviewCardSize = CompactCardSize
 
 @Composable
 fun FavoritesPreviewRow(
@@ -53,9 +51,7 @@ fun FavoritesPreviewRow(
         when (state) {
             FavoritesPreviewState.Loading -> item(key = "favorites_preview_loading") {
                 Box(
-                    modifier = Modifier
-                        .width(PreviewCardWidth)
-                        .height(PreviewCardHeight),
+                    modifier = Modifier.size(PreviewCardSize),
                     contentAlignment = Alignment.Center,
                 ) {
                     LoadingStub()
@@ -65,7 +61,7 @@ fun FavoritesPreviewRow(
             FavoritesPreviewState.Empty -> item(key = "favorites_preview_empty") {
                 TextCard(
                     text = stringResource(R.string.recipe_list_favorite_empty_state),
-                    modifier = Modifier.size(width = PreviewCardWidth, height = PreviewCardHeight),
+                    modifier = Modifier.size(PreviewCardSize),
                 )
             }
 
@@ -73,7 +69,7 @@ fun FavoritesPreviewRow(
                 items(items = state.items, key = { it.id }) { item ->
                     RecipeCompactCard(
                         item = item,
-                        modifier = Modifier.width(PreviewCardWidth),
+                        modifier = Modifier.size(PreviewCardSize),
                         onClick = { onItemClick(item) },
                         onLikeClick = { onLikeClick(item) },
                     )
@@ -95,10 +91,11 @@ private fun SeeAllCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.size(width = PreviewCardWidth, height = PreviewCardHeight),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = modifier.size(PreviewCardSize),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)),
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),

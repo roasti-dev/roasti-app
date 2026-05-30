@@ -43,8 +43,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
+import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
+import kotlinx.coroutines.flow.flowOf
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.Regular
@@ -66,6 +68,7 @@ import dev.roasti.ui.features.recipelist.components.RoastLevelFilterChip
 import dev.roasti.ui.features.recipelist.model.RecipeListItemUiModel
 import dev.roasti.ui.theme.RoastiTheme
 import dev.roasti.ui.theme.Spacing
+import dev.roasti.ui.uikit.AsyncImagePreviewProvider
 import dev.roasti.ui.uikit.ErrorStub
 import dev.roasti.ui.uikit.LoadingStub
 import dev.roasti.ui.util.recipeImageSharedElementModifier
@@ -203,7 +206,6 @@ private fun Content(
     PullToRefreshBox(isRefreshing = isManualRefresh, onRefresh = onRefresh, modifier = modifier) {
         LazyColumn(
             state = listState,
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             contentPadding = PaddingValues(
                 top = Spacing.sm,
                 bottom = contentPadding.calculateBottomPadding() + Spacing.xxxxl,
@@ -222,7 +224,10 @@ private fun Content(
             }
 
             item(FavoritesSectionKey) {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    modifier = Modifier.padding(top = Spacing.sm, bottom = Spacing.sm),
+                ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -257,7 +262,7 @@ private fun Content(
                     stringResource(R.string.recipe_list_all_section_title),
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
-                    modifier = Modifier.padding(start = Spacing.lg)
+                    modifier = Modifier.padding(start = Spacing.lg, top = Spacing.sm, bottom = Spacing.sm)
                 )
             }
 
@@ -271,7 +276,6 @@ private fun Content(
                     onLikeClick = { onLikeClick(recipe) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Spacing.lg)
                         .clickable { onClick(recipe.id) }
                         .animateItem(),
                     imageModifier = recipeImageSharedElementModifier(
@@ -288,7 +292,7 @@ private fun Content(
                         text = stringResource(R.string.recipes_empty_state),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = Spacing.lg)
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
                             .animateItem(),
                     )
                 }
@@ -397,5 +401,92 @@ private fun RecipesEmptyPlaceholderCardPreview() {
             text = "No recipes found",
             modifier = Modifier.fillMaxWidth(),
         )
+    }
+}
+
+private fun previewRecipe(
+    id: String,
+    title: String,
+    description: String,
+    @androidx.annotation.StringRes brewMethodLabelRes: Int,
+    @androidx.annotation.DrawableRes brewMethodIconRes: Int,
+    @androidx.annotation.StringRes difficultyLabelRes: Int,
+    likesCount: Int,
+    isLiked: Boolean = false,
+) = RecipeListItemUiModel(
+    id = id,
+    title = title,
+    description = description,
+    imageUrl = null,
+    brewMethodLabelRes = brewMethodLabelRes,
+    brewMethodIconRes = brewMethodIconRes,
+    difficultyLabelRes = difficultyLabelRes,
+    isLiked = isLiked,
+    likesCount = likesCount,
+)
+
+private fun previewRecipes() = listOf(
+    previewRecipe(
+        "1", "Ethiopia V60 Bright", "floral, citrus, tea-like",
+        R.string.recipe_brew_method_v60, R.drawable.ic_brew_v60,
+        R.string.recipe_difficulty_easy, 42, isLiked = true,
+    ),
+    previewRecipe(
+        "2", "Chemex Sunday Slow", "chocolate, nutty",
+        R.string.recipe_brew_method_chemex, R.drawable.ic_brew_chemex,
+        R.string.recipe_difficulty_medium, 18,
+    ),
+    previewRecipe(
+        "3", "Aeropress Inverted", "clean, sweet",
+        R.string.recipe_brew_method_aeropress, R.drawable.ic_brew_aeropress,
+        R.string.recipe_difficulty_medium, 30,
+    ),
+    previewRecipe(
+        "4", "Overnight Cold Brew", "smooth, chocolatey",
+        R.string.recipe_brew_method_cold_brew, R.drawable.ic_brew_cold_brew,
+        R.string.recipe_difficulty_easy, 55,
+    ),
+    previewRecipe(
+        "5", "Stovetop Moka Classic", "bold, syrupy",
+        R.string.recipe_brew_method_moka_pot, R.drawable.ic_brew_moka_pot,
+        R.string.recipe_difficulty_medium, 41,
+    ),
+    previewRecipe(
+        "6", "Morning French Press", "rich, full-bodied",
+        R.string.recipe_brew_method_french_press, R.drawable.ic_brew_french_press,
+        R.string.recipe_difficulty_easy, 64, isLiked = true,
+    ),
+)
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, heightDp = 920)
+@Composable
+private fun RecipesListContentPreview() {
+    val recipes = flowOf(PagingData.from(previewRecipes())).collectAsLazyPagingItems()
+    RoastiTheme {
+        AsyncImagePreviewProvider {
+            Content(
+                searchQuery = "",
+                filtersState = RecipeFilterState(brewMethod = BrewMethod.V60),
+                recipes = recipes,
+                favoritesPreviewState = FavoritesPreviewState.Content(
+                    items = previewRecipes().take(3),
+                    hasMore = true,
+                ),
+                onClick = {},
+                onLikeClick = {},
+                onSearch = {},
+                onRefresh = {},
+                onSeeAllFavorites = {},
+                isManualRefresh = false,
+                onBrewMethodSelected = {},
+                onDifficultySelected = {},
+                onRoastLevelSelected = {},
+                sharedTransitionScope = null,
+                animatedVisibilityScope = null,
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
 }

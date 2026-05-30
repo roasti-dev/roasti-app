@@ -1,5 +1,6 @@
 package dev.roasti.ui.features.recipe.mapper
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import dev.roasti.R
 import dev.roasti.feature.recipe.domain.model.BrewMethod
@@ -16,6 +17,18 @@ internal fun BrewMethod.labelRes(): Int = when (this) {
     BrewMethod.EspressoMachine -> R.string.recipe_brew_method_espresso_machine
     BrewMethod.MokaPot -> R.string.recipe_brew_method_moka_pot
     BrewMethod.NONE -> R.string.recipe_missing_value
+}
+
+@DrawableRes
+internal fun BrewMethod.iconRes(): Int = when (this) {
+    BrewMethod.V60 -> R.drawable.ic_brew_v60
+    BrewMethod.FrenchPress -> R.drawable.ic_brew_french_press
+    BrewMethod.Aeropress -> R.drawable.ic_brew_aeropress
+    BrewMethod.Chemex -> R.drawable.ic_brew_chemex
+    BrewMethod.ColdBrew -> R.drawable.ic_brew_cold_brew
+    BrewMethod.EspressoMachine -> R.drawable.ic_brew_espresso
+    BrewMethod.MokaPot -> R.drawable.ic_brew_moka_pot
+    BrewMethod.NONE -> R.drawable.ic_brew_none
 }
 
 @StringRes

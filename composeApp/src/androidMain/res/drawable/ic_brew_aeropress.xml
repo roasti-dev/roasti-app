@@ -1,0 +1,45 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+
+    <!-- mug handle -->
+    <path
+        android:strokeColor="#D7A24C"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M38,45 C45,45 45,50 38,50" />
+    <!-- mug -->
+    <path
+        android:fillColor="#5E89A8"
+        android:pathData="M24,42 H40 V52 A3,3 0 0 1 37,55 H27 A3,3 0 0 1 24,52 Z" />
+    <group>
+        <clip-path android:pathData="M24,42 H40 V52 A3,3 0 0 1 37,55 H27 A3,3 0 0 1 24,52 Z" />
+        <path
+            android:fillColor="#B27C4F"
+            android:pathData="M24,44 C27,43 30,44 32,44 C35,44 38,43 40,44 L40,47 L24,47 Z" />
+    </group>
+    <!-- chamber -->
+    <path
+        android:fillColor="#D3E1E9"
+        android:pathData="M27,21 H37 A1.5,1.5 0 0 1 38,22.5 V42 H26 V22.5 A1.5,1.5 0 0 1 27,21 Z" />
+    <!-- measurement marks -->
+    <path
+        android:strokeColor="#33414B"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:pathData="M28,26 H30 M28,30 H30 M28,34 H30 M28,38 H30" />
+    <!-- plunger cap -->
+    <path
+        android:fillColor="#33414B"
+        android:pathData="M26,17 H38 A1,1 0 0 1 39,18 V20 A1,1 0 0 1 38,21 H26 A1,1 0 0 1 25,20 V18 A1,1 0 0 1 26,17 Z" />
+    <!-- plunger stem -->
+    <path
+        android:fillColor="#D7A24C"
+        android:pathData="M30,14 H34 V17 H30 Z" />
+    <!-- plunger top disc -->
+    <path
+        android:fillColor="#D7A24C"
+        android:pathData="M28,11 H36 A1.4,1.4 0 0 1 37,12.4 V14 H27 V12.4 A1.4,1.4 0 0 1 28,11 Z" />
+</vector>

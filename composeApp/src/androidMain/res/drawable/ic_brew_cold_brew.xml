@@ -1,0 +1,40 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+
+    <!-- jar -->
+    <path
+        android:fillColor="#D3E1E9"
+        android:pathData="M22,16 H42 A2,2 0 0 1 44,18 V51 A3,3 0 0 1 41,54 H23 A3,3 0 0 1 20,51 V18 A2,2 0 0 1 22,16 Z" />
+    <group>
+        <clip-path android:pathData="M22,16 H42 A2,2 0 0 1 44,18 V51 A3,3 0 0 1 41,54 H23 A3,3 0 0 1 20,51 V18 A2,2 0 0 1 22,16 Z" />
+        <path
+            android:fillColor="#B27C4F"
+            android:pathData="M20,28 C25,26 30,27 32,28 C36,29 40,28 44,28 L44,54 L20,54 Z" />
+        <path
+            android:fillColor="#8E5B36"
+            android:pathData="M20,49 H44 V54 H20 Z" />
+        <path
+            android:fillColor="#DCEAF0"
+            android:pathData="M24.5,30 H28.5 A1,1 0 0 1 29.5,31 V34 A1,1 0 0 1 28.5,35 H24.5 A1,1 0 0 1 23.5,34 V31 A1,1 0 0 1 24.5,30 Z" />
+        <path
+            android:fillColor="#DCEAF0"
+            android:pathData="M31.5,32 H35 A1,1 0 0 1 36,33 V36 A1,1 0 0 1 35,37 H31.5 A1,1 0 0 1 30.5,36 V33 A1,1 0 0 1 31.5,32 Z" />
+    </group>
+    <!-- lid -->
+    <path
+        android:fillColor="#33414B"
+        android:pathData="M22,12 H42 A1,1 0 0 1 43,13 V16 H21 V13 A1,1 0 0 1 22,12 Z" />
+    <path
+        android:fillColor="#33414B"
+        android:pathData="M30,8 H34 A1,1 0 0 1 35,9 V12 H29 V9 A1,1 0 0 1 30,8 Z" />
+    <!-- spigot -->
+    <path
+        android:fillColor="#D7A24C"
+        android:pathData="M44,43 H48 A1,1 0 0 1 49,44 A1,1 0 0 1 48,45 H46 V48 A1,1 0 0 1 45,49 A1,1 0 0 1 44,48 Z" />
+    <path
+        android:fillColor="#33414B"
+        android:pathData="M45,40 H47 A1,1 0 0 1 48,41 V43 H45 Z" />
+</vector>

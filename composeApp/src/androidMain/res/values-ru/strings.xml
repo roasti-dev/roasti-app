@@ -28,6 +28,7 @@
     <string name="recipe_brew_method">Способ заваривания</string>
     <string name="recipe_brew_method_all">Все</string>
     <string name="recipes_search_hint">Поиск смесей, обжарок…</string>
+    <string name="recipes_search_clear">Очистить поиск</string>
     <string name="recipes_empty_state">Рецепты не найдены</string>
     <string name="filter_clear">Очистить</string>
     <string name="recipe_roaster">Обжарщик</string>

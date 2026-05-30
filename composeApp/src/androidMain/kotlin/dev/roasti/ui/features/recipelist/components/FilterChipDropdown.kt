@@ -3,10 +3,12 @@ package dev.roasti.ui.features.recipelist.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -53,7 +55,16 @@ internal fun FilterChipDropdown(
                     modifier = Modifier.size(12.dp).rotate(animatedRotationDegree)
                 )
             },
-            shape = RoundedCornerShape(16.dp),
+            shape = CircleShape,
+            border = null,
+            colors = FilterChipDefaults.filterChipColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                selectedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                selectedLabelColor = MaterialTheme.colorScheme.tertiary,
+                selectedTrailingIconColor = MaterialTheme.colorScheme.tertiary,
+            ),
         )
 
         DropdownMenu(

@@ -1,0 +1,54 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+
+    <!-- handle -->
+    <path
+        android:strokeColor="#D7A24C"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M42,29 C52,30 52,45 42,47" />
+    <!-- spout -->
+    <path
+        android:fillColor="#5E89A8"
+        android:pathData="M21,25 L13,26 L21,30 Z" />
+    <!-- glass body -->
+    <path
+        android:fillColor="#D3E1E9"
+        android:pathData="M23,24 H41 A3,3 0 0 1 44,27 V51 A3,3 0 0 1 41,54 H23 A3,3 0 0 1 20,51 V27 A3,3 0 0 1 23,24 Z" />
+    <group>
+        <clip-path android:pathData="M23,24 H41 A3,3 0 0 1 44,27 V51 A3,3 0 0 1 41,54 H23 A3,3 0 0 1 20,51 V27 A3,3 0 0 1 23,24 Z" />
+        <path
+            android:fillColor="#B27C4F"
+            android:pathData="M20,40 C25,37 28,38 32,40 C36,42 39,41 44,40 L44,54 L20,54 Z" />
+        <path
+            android:fillColor="#8E5B36"
+            android:pathData="M20,49 H44 V54 H20 Z" />
+    </group>
+    <!-- plunger rod -->
+    <path
+        android:fillColor="#33414B"
+        android:pathData="M31,24 H33 V42 H31 Z" />
+    <!-- filter disc -->
+    <path
+        android:fillColor="#33414B"
+        android:pathData="M23.5,41 H40.5 A1.2,1.2 0 0 1 40.5,43.4 H23.5 A1.2,1.2 0 0 1 23.5,41 Z" />
+    <!-- lid collar -->
+    <path
+        android:fillColor="#33414B"
+        android:pathData="M19.5,20 H44.5 A1.5,1.5 0 0 1 46,21.5 V22.5 A1.5,1.5 0 0 1 44.5,24 H19.5 A1.5,1.5 0 0 1 18,22.5 V21.5 A1.5,1.5 0 0 1 19.5,20 Z" />
+    <!-- dome -->
+    <path
+        android:fillColor="#5E89A8"
+        android:pathData="M26,20 V17 A6,6 0 0 1 38,17 V20 Z" />
+    <!-- knob stem -->
+    <path
+        android:fillColor="#33414B"
+        android:pathData="M31,9 H33 V20 H31 Z" />
+    <!-- knob -->
+    <path
+        android:fillColor="#D7A24C"
+        android:pathData="M27,4 H37 A2.5,2.5 0 0 1 37,9 H27 A2.5,2.5 0 0 1 27,4 Z" />
+</vector>
