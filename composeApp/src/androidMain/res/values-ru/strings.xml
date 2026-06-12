@@ -176,4 +176,32 @@
     <string name="settings_language_russian">Русский</string>
     <string name="settings_open_system_language">Открыть системные настройки языка</string>
     <string name="language_sheet_title">Выберите язык</string>
+
+    <!-- Уведомления фонового заваривания -->
+    <string name="brew_notification_channel_name">Напоминания о заваривании</string>
+    <string name="brew_notification_channel_description">Уведомляет, когда фоновый шаг заваривания завершён</string>
+    <string name="brew_ready_title">%1$s готов</string>
+    <string name="brew_ready_text">Шаг завершён — можно продолжать</string>
+
+    <!-- Фоновое заваривание: picker длительности + экран ожидания -->
+    <string name="brew_duration_days">дн</string>
+    <string name="brew_duration_hours">ч</string>
+    <string name="brew_duration_minutes">мин</string>
+    <string name="brew_notify_when_done">Уведомить когда готово</string>
+    <string name="brew_background_sheet_title">Сколько настаивать?</string>
+    <string name="brew_background_confirm">В фон</string>
+    <string name="brew_waiting_steeping">Настаивается</string>
+    <string name="brew_waiting_remaining">осталось %1$s</string>
+    <string name="brew_waiting_ready">Шаг завершён</string>
+    <string name="brew_continue">Продолжить</string>
+    <string name="brew_finish_wait_early">Готово, продолжить</string>
+    <string name="brew_cancel">Отменить заваривание</string>
+    <string name="brew_note_hint">Добавить заметку (необязательно)</string>
+
+    <!-- Карусель активных + история -->
+    <string name="brew_active_section_title">Сейчас завариваются</string>
+    <string name="brew_history_link">История</string>
+    <string name="brew_card_step">Шаг %1$d/%2$d</string>
+    <string name="brew_history_title">История завариваний</string>
+    <string name="brew_history_empty">Здесь появятся завершённые заваривания</string>
 </resources>

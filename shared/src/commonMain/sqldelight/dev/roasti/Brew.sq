@@ -1,0 +1,76 @@
+CREATE TABLE Brew (
+    id TEXT NOT NULL PRIMARY KEY,
+    recipe_id TEXT NOT NULL,
+    recipe_title TEXT NOT NULL,
+    brew_method TEXT NOT NULL,            -- BrewMethod.name
+    image_id TEXT,
+    status TEXT NOT NULL,                 -- BrewStatus.name: BREWING | WAITING | COMPLETED | CANCELLED
+    current_step_index INTEGER NOT NULL,
+    wait_until INTEGER,                   -- epochMillis, != null только в WAITING
+    background_step_index INTEGER,        -- какой шаг отпущен в фон
+    note TEXT,                            -- опциональная заметка на финале
+    started_at INTEGER NOT NULL,          -- epochMillis
+    finished_at INTEGER,                  -- epochMillis, в COMPLETED
+    updated_at INTEGER NOT NULL           -- epochMillis
+);
+
+-- активные = brewing + waiting; для карусели и бейджа
+observeActive:
+SELECT * FROM Brew
+WHERE status IN ('BREWING', 'WAITING')
+ORDER BY started_at DESC;
+
+-- история
+observeCompleted:
+SELECT * FROM Brew
+WHERE status = 'COMPLETED'
+ORDER BY finished_at DESC;
+
+observeById:
+SELECT * FROM Brew WHERE id = :id;
+
+getById:
+SELECT * FROM Brew WHERE id = :id;
+
+-- для BootReceiver перепланирования будильников
+selectWaiting:
+SELECT * FROM Brew WHERE status = 'WAITING';
+
+insertBrew:
+INSERT INTO Brew(
+    id, recipe_id, recipe_title, brew_method, image_id, status,
+    current_step_index, wait_until, background_step_index, note,
+    started_at, finished_at, updated_at
+) VALUES(
+    :id, :recipeId, :recipeTitle, :brewMethod, :imageId, :status,
+    :currentStepIndex, :waitUntil, :backgroundStepIndex, :note,
+    :startedAt, :finishedAt, :updatedAt
+);
+
+updateStepIndex:
+UPDATE Brew SET current_step_index = :stepIndex, updated_at = :updatedAt WHERE id = :id;
+
+setWaiting:
+UPDATE Brew
+SET status = 'WAITING', wait_until = :waitUntil, background_step_index = :stepIndex, updated_at = :updatedAt
+WHERE id = :id;
+
+setBrewing:
+UPDATE Brew
+SET status = 'BREWING', wait_until = NULL, background_step_index = NULL,
+    current_step_index = :stepIndex, updated_at = :updatedAt
+WHERE id = :id;
+
+setCompleted:
+UPDATE Brew
+SET status = 'COMPLETED', finished_at = :finishedAt, note = :note, updated_at = :updatedAt
+WHERE id = :id;
+
+setCancelled:
+UPDATE Brew SET status = 'CANCELLED', updated_at = :updatedAt WHERE id = :id;
+
+deleteBrew:
+DELETE FROM Brew WHERE id = :id;
+
+clearAllBrews:
+DELETE FROM Brew;

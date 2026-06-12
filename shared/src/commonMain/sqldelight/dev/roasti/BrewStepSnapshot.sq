@@ -1,0 +1,24 @@
+CREATE TABLE BrewStepSnapshot (
+    brew_id TEXT NOT NULL,
+    step_order INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    duration_seconds INTEGER,
+    image_id TEXT,
+    PRIMARY KEY (brew_id, step_order)
+);
+
+insertStep:
+INSERT OR REPLACE INTO BrewStepSnapshot(
+    brew_id, step_order, title, duration_seconds, image_id
+) VALUES (:brewId, :stepOrder, :title, :durationSeconds, :imageId);
+
+getStepsByBrewId:
+SELECT * FROM BrewStepSnapshot
+WHERE brew_id = :brewId
+ORDER BY step_order ASC;
+
+deleteStepsByBrewId:
+DELETE FROM BrewStepSnapshot WHERE brew_id = :brewId;
+
+clearAllSteps:
+DELETE FROM BrewStepSnapshot;

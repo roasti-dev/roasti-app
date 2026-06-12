@@ -1,5 +1,6 @@
 package dev.roasti.feature.recipe.domain.session
 
+import dev.roasti.feature.recipe.domain.model.BrewStep
 import dev.roasti.feature.recipe.domain.model.Recipe
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -196,10 +197,34 @@ class BrewingEngine(
             scope: CoroutineScope,
             clock: BrewingClock,
             config: BrewingEngineConfig = BrewingEngineConfig(),
+        ): BrewingEngine = fromSteps(
+            steps = recipe.steps,
+            recipeId = recipe.id,
+            recipeTitle = recipe.title,
+            startStep = startStep,
+            autoAdvance = autoAdvance,
+            scope = scope,
+            clock = clock,
+            config = config,
+        )
+
+        /**
+         * Строит движок из произвольного списка шагов — для Brew-driven экрана (шаги берутся
+         * из снапшота Brew, а не из живого рецепта).
+         */
+        fun fromSteps(
+            steps: List<BrewStep>,
+            recipeId: String,
+            recipeTitle: String,
+            startStep: Int,
+            autoAdvance: Boolean,
+            scope: CoroutineScope,
+            clock: BrewingClock,
+            config: BrewingEngineConfig = BrewingEngineConfig(),
         ): BrewingEngine {
-            require(recipe.steps.isNotEmpty()) { "Recipe has no brewing steps" }
-            val safeStart = startStep.coerceIn(0, recipe.steps.lastIndex)
-            val firstStep = recipe.steps[safeStart]
+            require(steps.isNotEmpty()) { "Brew has no steps" }
+            val safeStart = startStep.coerceIn(0, steps.lastIndex)
+            val firstStep = steps[safeStart]
             val shouldAutoStart = (firstStep.durationSeconds ?: 0) > 0
             val initialTimer = StepTimerState.forStep(
                 durationSeconds = firstStep.durationSeconds,
@@ -207,9 +232,9 @@ class BrewingEngine(
                 nowMillis = clock.nowMillis(),
             )
             val initial = BrewingEngineState(
-                recipeId = recipe.id,
-                recipeTitle = recipe.title,
-                steps = recipe.steps,
+                recipeId = recipeId,
+                recipeTitle = recipeTitle,
+                steps = steps,
                 currentStepIndex = safeStart,
                 expandedStepIndex = safeStart,
                 isFinished = false,
@@ -217,12 +242,7 @@ class BrewingEngine(
                 autoAdvance = autoAdvance,
                 pendingAutoAdvance = null,
             )
-            return BrewingEngine(
-                scope = scope,
-                clock = clock,
-                config = config,
-                initial = initial,
-            )
+            return BrewingEngine(scope = scope, clock = clock, config = config, initial = initial)
         }
     }
 }

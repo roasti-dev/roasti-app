@@ -14,7 +14,9 @@ import dev.roasti.ui.features.postdetail.PostDetailViewModel
 import dev.roasti.ui.features.profile.ProfileViewModel
 import dev.roasti.ui.features.recipelist.RecipesListViewModel
 import dev.roasti.ui.features.recipepage.RecipeContentViewModel
-import dev.roasti.ui.features.recipesteps.RecipeStepsViewModel
+import dev.roasti.ui.features.brew.BrewViewModel
+import dev.roasti.ui.features.brewhistory.BrewHistoryViewModel
+import dev.roasti.ui.components.BrewBadgeViewModel
 import dev.roasti.ui.features.userprofile.UserProfileViewModel
 
 val viewModelsModule = module {
@@ -22,7 +24,7 @@ val viewModelsModule = module {
     viewModel { LoginViewModel(get()) }
     viewModel { RegisterViewModel(get()) }
     viewModel { ProfileViewModel(get(), get(), get()) }
-    viewModel { RecipesListViewModel(get(), get(), get(), get(), get()) }
+    viewModel { RecipesListViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { FeedViewModel(get(), get()) }
     viewModel { params -> PostDetailViewModel(params.get(), get(), get(), get()) }
     viewModel { params ->
@@ -32,8 +34,10 @@ val viewModelsModule = module {
             uploadRepository = get(),
         )
     }
-    viewModel { params -> RecipeContentViewModel(params.get(), get(), get()) }
-    viewModel { params -> RecipeStepsViewModel(params.get(), params.get(), get(), get(), get()) }
+    viewModel { params -> RecipeContentViewModel(params.get(), get(), get(), get()) }
+    viewModel { params -> BrewViewModel(params.get(), params.get(), get(), get(), get(), get()) }
+    viewModel { BrewHistoryViewModel(get()) }
+    viewModel { BrewBadgeViewModel(get()) }
     viewModel { CreateRecipeScreenViewModel(get(), get()) }
     viewModel { params -> EditRecipeViewModel(params.get(), get(), get()) }
     viewModel { FavoritesViewModel(get(), get()) }

@@ -28,6 +28,7 @@ import androidx.navigation.navArgument
 import org.koin.compose.viewmodel.koinViewModel
 import dev.roasti.feature.auth.domain.model.AuthState
 import dev.roasti.ui.components.BottomBar
+import dev.roasti.ui.components.BrewBadgeViewModel
 import dev.roasti.ui.components.LocalBottomBarScrollBehavior
 import dev.roasti.ui.components.rememberBottomBarScrollBehavior
 import dev.roasti.ui.features.auth.login.LoginRoute
@@ -39,7 +40,8 @@ import dev.roasti.ui.features.photoviewer.PhotoViewerScreen
 import dev.roasti.ui.features.profile.ProfileRoute
 import dev.roasti.ui.features.settings.SettingsRoute
 import dev.roasti.ui.features.recipepage.RecipeContentRoute
-import dev.roasti.ui.features.recipesteps.RecipeStepsRoute
+import dev.roasti.ui.features.brew.BrewRoute
+import dev.roasti.ui.features.brewhistory.BrewHistoryRoute
 import dev.roasti.ui.features.userprofile.UserProfileRoute
 import dev.roasti.ui.screens.FeedRoute
 import dev.roasti.ui.screens.PostComposeRoute
@@ -51,6 +53,8 @@ private const val VerticalSlideDurationMillis = 280
 
 @Composable
 fun AppNavHost(
+    deepLinkBrewId: String? = null,
+    onDeepLinkConsumed: () -> Unit = {},
 ) {
     val viewModel: AppNavigationViewModel = koinViewModel()
     val authState = viewModel.authState.collectAsStateWithLifecycle()
@@ -63,7 +67,10 @@ fun AppNavHost(
         when (authState.value) {
             AuthState.Loading -> LoadingStub(modifier = Modifier.fillMaxSize())
             is AuthState.Error, AuthState.Guest -> AuthNavHost()
-            is AuthState.Authenticated -> MainNavHost()
+            is AuthState.Authenticated -> MainNavHost(
+                deepLinkBrewId = deepLinkBrewId,
+                onDeepLinkConsumed = onDeepLinkConsumed,
+            )
         }
     }
 }
@@ -101,12 +108,27 @@ private fun AuthNavHost(
 @Composable
 private fun MainNavHost(
     navController: NavHostController = rememberNavController(),
+    deepLinkBrewId: String? = null,
+    onDeepLinkConsumed: () -> Unit = {},
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = currentRoute in bottomNavScreens.map { it.route }
 
+    // Deep-link из уведомления: открыть Brew с resume=true → авто-продвинуть на следующий шаг.
+    // launchSingleTop: повторный тап не плодит дубль и не сбрасывает экран.
+    LaunchedEffect(deepLinkBrewId) {
+        val brewId = deepLinkBrewId ?: return@LaunchedEffect
+        navController.navigate(Screen.Brew.createRoute(brewId, resume = true)) {
+            launchSingleTop = true
+        }
+        onDeepLinkConsumed()
+    }
+
     val bottomBarScrollBehavior = rememberBottomBarScrollBehavior()
+
+    val brewBadgeViewModel: BrewBadgeViewModel = koinViewModel()
+    val activeBrewCount by brewBadgeViewModel.activeCount.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -124,6 +146,7 @@ private fun MainNavHost(
                         }
                     },
                     scrollBehavior = bottomBarScrollBehavior,
+                    recipesBadgeCount = activeBrewCount,
                 )
             }
         },
@@ -171,6 +194,8 @@ private fun MainNavHost(
                         onRecipeClick = { navController.navigate(Screen.RecipeItem.createRoute(it)) },
                         onCreateClick = { navController.navigate(Screen.CreateRecipe.route) },
                         onSeeAllFavorites = { navController.navigate(Screen.Favorites.route) },
+                        onOpenBrew = { brewId -> navController.navigate(Screen.Brew.createRoute(brewId)) },
+                        onOpenHistory = { navController.navigate(Screen.BrewHistory.route) },
                         sharedTransitionScope = this@SharedTransitionLayout,
                         animatedVisibilityScope = this,
                     )
@@ -218,8 +243,8 @@ private fun MainNavHost(
                         animatedVisibilityScope = this@composable,
                         onBackClick = { navController.popBackStack() },
                         onEditClick = { navController.navigate(Screen.EditRecipe.createRoute(id)) },
-                        onStartBrewing = { startStep ->
-                            navController.navigate(Screen.RecipeSteps.createRoute(id, startStep))
+                        onOpenBrew = { brewId ->
+                            navController.navigate(Screen.Brew.createRoute(brewId))
                         },
                         onAuthorClick = { userId, username, avatarTag ->
                             navController.navigate(
@@ -348,19 +373,26 @@ private fun MainNavHost(
                 }
 
                 composable(
-                    route = Screen.RecipeSteps.route,
+                    route = Screen.Brew.route,
                     arguments = listOf(
-                        navArgument("id") { type = NavType.StringType },
-                        navArgument("startStep") { type = NavType.IntType },
+                        navArgument(Screen.Brew.ARG_BREW_ID) { type = NavType.StringType },
+                        navArgument(Screen.Brew.ARG_RESUME) {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        },
                     )
                 ) { entry ->
-                    val id = entry.arguments?.getString("id") ?: return@composable
-                    val startStep = entry.arguments?.getInt("startStep") ?: 0
-                    RecipeStepsRoute(
-                        id = id,
-                        startStep = startStep,
-                        sharedTransitionScope = this@SharedTransitionLayout,
-                        animatedVisibilityScope = this@composable,
+                    val brewId = entry.arguments?.getString(Screen.Brew.ARG_BREW_ID) ?: return@composable
+                    val resume = entry.arguments?.getBoolean(Screen.Brew.ARG_RESUME) ?: false
+                    BrewRoute(
+                        brewId = brewId,
+                        autoResume = resume,
+                        onBackClick = { navController.popBackStack() },
+                    )
+                }
+
+                composable(Screen.BrewHistory.route) {
+                    BrewHistoryRoute(
                         onBackClick = { navController.popBackStack() },
                     )
                 }

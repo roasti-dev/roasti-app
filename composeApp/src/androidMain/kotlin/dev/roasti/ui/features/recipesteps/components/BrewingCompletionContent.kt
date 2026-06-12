@@ -13,6 +13,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,6 +30,8 @@ import dev.roasti.ui.theme.Spacing
 internal fun BrewingCompletionContent(
     onFinish: () -> Unit,
     modifier: Modifier = Modifier,
+    note: String = "",
+    onNoteChange: (String) -> Unit = {},
 ) {
     Column(
         modifier = modifier
@@ -50,6 +53,14 @@ internal fun BrewingCompletionContent(
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(Spacing.xl))
+        OutlinedTextField(
+            value = note,
+            onValueChange = onNoteChange,
+            placeholder = { Text(stringResource(R.string.brew_note_hint)) },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 2,
         )
         Spacer(Modifier.height(Spacing.xxxl))
         Button(

@@ -92,7 +92,7 @@ fun RecipeContentRoute(
     id: String,
     onBackClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
-    onStartBrewing: (startStep: Int) -> Unit = {},
+    onOpenBrew: (brewId: String) -> Unit = {},
     onAuthorClick: (userId: String, username: String, avatarTag: String?) -> Unit = { _, _, _ -> },
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -115,6 +115,7 @@ fun RecipeContentRoute(
         viewModel.navEvents.collectLatest { event ->
             when (event) {
                 RecipeContentNavEvent.NavigateBack -> onBackClick()
+                is RecipeContentNavEvent.NavigateToBrew -> onOpenBrew(event.brewId)
             }
         }
     }
@@ -132,7 +133,7 @@ fun RecipeContentRoute(
             onEditClick = onEditClick,
             onRemoveClick = { showRemoveDialogConfirmation = true },
             onLikeClick = viewModel::toggleLike,
-            onStepClick = onStartBrewing,
+            onStepClick = viewModel::startBrewing,
             onAuthorClick = onAuthorClick,
         )
     }

@@ -175,4 +175,32 @@
     <string name="settings_language_russian">Русский</string>
     <string name="settings_open_system_language">Open system language settings</string>
     <string name="language_sheet_title">Choose language</string>
+
+    <!-- Background brew notifications -->
+    <string name="brew_notification_channel_name">Brew reminders</string>
+    <string name="brew_notification_channel_description">Notifies you when a backgrounded brewing step is done</string>
+    <string name="brew_ready_title">%1$s is ready</string>
+    <string name="brew_ready_text">The step is done — you can continue</string>
+
+    <!-- Background brew: duration picker + waiting screen -->
+    <string name="brew_duration_days">d</string>
+    <string name="brew_duration_hours">h</string>
+    <string name="brew_duration_minutes">min</string>
+    <string name="brew_notify_when_done">Notify when done</string>
+    <string name="brew_background_sheet_title">How long to steep?</string>
+    <string name="brew_background_confirm">Run in background</string>
+    <string name="brew_waiting_steeping">Steeping</string>
+    <string name="brew_waiting_remaining">%1$s left</string>
+    <string name="brew_waiting_ready">Step done</string>
+    <string name="brew_continue">Continue</string>
+    <string name="brew_finish_wait_early">Done, continue</string>
+    <string name="brew_cancel">Cancel brew</string>
+    <string name="brew_note_hint">Add a note (optional)</string>
+
+    <!-- Active brews carousel + history -->
+    <string name="brew_active_section_title">Brewing now</string>
+    <string name="brew_history_link">History</string>
+    <string name="brew_card_step">Step %1$d/%2$d</string>
+    <string name="brew_history_title">Brew history</string>
+    <string name="brew_history_empty">Completed brews will show up here</string>
 </resources>

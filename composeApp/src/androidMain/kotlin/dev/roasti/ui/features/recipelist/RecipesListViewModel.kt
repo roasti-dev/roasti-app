@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import dev.roasti.feature.auth.domain.repository.AuthRepository
+import dev.roasti.feature.brew.domain.BrewRepository
 import dev.roasti.feature.likes.data.LikesApiClient
 import dev.roasti.feature.likes.data.toDomain
 import dev.roasti.feature.recipe.domain.RecipeListsRepository
@@ -32,6 +33,8 @@ import dev.roasti.feature.recipe.domain.model.RecipesPagingQuery
 import dev.roasti.feature.recipe.domain.model.RoastLevel
 import dev.roasti.feature.recipe.presentation.filter.RecipeFilterState
 import dev.roasti.feature.recipe.presentation.filter.RecipeFilterStore
+import dev.roasti.ui.features.brew.carousel.ActiveBrewCardUiModel
+import dev.roasti.ui.features.brew.carousel.mapper.toActiveCardUiModel
 import dev.roasti.ui.features.favorites.model.FavoritesPreviewState
 import dev.roasti.ui.features.recipelist.mapper.toUiModel
 import dev.roasti.ui.features.recipelist.model.RecipeListItemUiModel
@@ -48,7 +51,14 @@ class RecipesListViewModel(
     private val recipeRepository: RecipeRepository,
     private val authRepository: AuthRepository,
     private val likesApiClient: LikesApiClient,
+    private val brewRepository: BrewRepository,
 ) : ViewModel() {
+
+    val activeBrews: StateFlow<List<ActiveBrewCardUiModel>> =
+        brewRepository.observeActive()
+            .map { brews -> brews.map { it.toActiveCardUiModel() } }
+            .stateInWhileSubscribe(emptyList())
+
     val hasCachedRecipes: StateFlow<Boolean> =
         recipeListsRepository.observeHasCachedFeed()
             .stateIn(

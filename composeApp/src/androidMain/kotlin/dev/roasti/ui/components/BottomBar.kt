@@ -2,6 +2,8 @@ package dev.roasti.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -37,6 +39,7 @@ fun BottomBar(
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier,
     scrollBehavior: BottomBarScrollBehavior? = null,
+    recipesBadgeCount: Int = 0,
 ) {
     val barModifier = if (scrollBehavior != null) {
         modifier
@@ -71,12 +74,20 @@ fun BottomBar(
                             tint = color,
                         )
 
-                        Screen.Recipes.route -> Icon(
-                            imageVector = PhosphorIcons.Regular.BookOpenText,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = color,
-                        )
+                        Screen.Recipes.route -> BadgedBox(
+                            badge = {
+                                if (recipesBadgeCount > 0) {
+                                    Badge { Text(recipesBadgeCount.toString()) }
+                                }
+                            },
+                        ) {
+                            Icon(
+                                imageVector = PhosphorIcons.Regular.BookOpenText,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = color,
+                            )
+                        }
 
                         Screen.Profile.route -> Icon(
                             imageVector = PhosphorIcons.Regular.User,

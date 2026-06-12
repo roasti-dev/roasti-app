@@ -14,9 +14,11 @@ import dev.roasti.core.di.coreDatabaseModule
 import dev.roasti.core.di.coreNetworkModule
 import dev.roasti.core.di.postPagingModule
 import dev.roasti.core.di.recipePagingModule
+import dev.roasti.di.brewPlatformModule
 import dev.roasti.di.platformModule
 import dev.roasti.di.viewModelsModule
 import dev.roasti.feature.auth.di.authModule
+import dev.roasti.feature.brew.di.brewModule
 import dev.roasti.feature.comment.di.commentModule
 import dev.roasti.feature.likes.di.likesModule
 import dev.roasti.feature.post.di.postModule
@@ -44,6 +46,8 @@ class RoastiApplication : Application() {
                 recipeModule,
                 postModule,
                 commentModule,
+                brewPlatformModule,
+                brewModule,
                 viewModelsModule
             )
         }

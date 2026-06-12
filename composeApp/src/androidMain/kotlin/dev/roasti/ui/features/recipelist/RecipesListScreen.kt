@@ -58,6 +58,8 @@ import dev.roasti.feature.recipe.domain.model.BrewMethod
 import dev.roasti.feature.recipe.domain.model.Difficulty
 import dev.roasti.feature.recipe.domain.model.RoastLevel
 import dev.roasti.feature.recipe.presentation.filter.RecipeFilterState
+import dev.roasti.ui.features.brew.carousel.ActiveBrewCardUiModel
+import dev.roasti.ui.features.brew.carousel.ActiveBrewsSection
 import dev.roasti.ui.features.favorites.model.FavoritesPreviewState
 import dev.roasti.ui.features.favorites.widgets.FavoritesPreviewRow
 import dev.roasti.ui.features.recipelist.components.BrewMethodFilterChip
@@ -82,6 +84,8 @@ internal fun RecipesListScreen(
     onRecipeClick: (String) -> Unit = {},
     onCreateClick: () -> Unit = {},
     onSeeAllFavorites: () -> Unit = {},
+    onOpenBrew: (String) -> Unit = {},
+    onOpenHistory: () -> Unit = {},
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     contentPadding: PaddingValues,
@@ -95,6 +99,7 @@ internal fun RecipesListScreen(
     val isManualRefresh by viewModel.isManualRefresh.collectAsStateWithLifecycle()
     val recipes = viewModel.pagingRecipesState.collectAsLazyPagingItems()
     val favoritesPreviewState by viewModel.favoritesPreviewState.collectAsStateWithLifecycle()
+    val activeBrews by viewModel.activeBrews.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -134,6 +139,9 @@ internal fun RecipesListScreen(
                 filtersState = filtersState,
                 recipes = recipes,
                 favoritesPreviewState = favoritesPreviewState,
+                activeBrews = activeBrews,
+                onBrewClick = onOpenBrew,
+                onOpenHistory = onOpenHistory,
                 onClick = onRecipeClick,
                 onLikeClick = viewModel::likeRecipe,
                 onSearch = viewModel::search,
@@ -187,6 +195,9 @@ private fun Content(
     filtersState: RecipeFilterState,
     recipes: LazyPagingItems<RecipeListItemUiModel>,
     favoritesPreviewState: FavoritesPreviewState,
+    activeBrews: List<ActiveBrewCardUiModel>,
+    onBrewClick: (String) -> Unit,
+    onOpenHistory: () -> Unit,
     onClick: (String) -> Unit,
     onLikeClick: (RecipeListItemUiModel) -> Unit,
     onSearch: (String) -> Unit,
@@ -219,6 +230,25 @@ private fun Content(
                     onBrewMethodSelected = onBrewMethodSelected,
                     onDifficultySelected = onDifficultySelected,
                     onRoastLevelSelected = onRoastLevelSelected,
+                    modifier = Modifier.animateItem(),
+                )
+            }
+
+            if (activeBrews.isNotEmpty()) {
+                item(key = "active_brews_section") {
+                    ActiveBrewsSection(
+                        brews = activeBrews,
+                        onBrewClick = onBrewClick,
+                        modifier = Modifier.animateItem(),
+                    )
+                }
+            }
+
+            // Постоянный вход в Историю — доступен всегда, даже без активных завариваний.
+            item(key = "brew_history_entry") {
+                SectionHeaderRow(
+                    title = stringResource(R.string.brew_history_title),
+                    onClick = onOpenHistory,
                     modifier = Modifier.animateItem(),
                 )
             }
@@ -317,6 +347,34 @@ private fun Content(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SectionHeaderRow(
+    title: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            imageVector = PhosphorIcons.Regular.ArrowRight,
+            contentDescription = title,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
 
@@ -473,6 +531,9 @@ private fun RecipesListContentPreview() {
                     items = previewRecipes().take(3),
                     hasMore = true,
                 ),
+                activeBrews = emptyList(),
+                onBrewClick = {},
+                onOpenHistory = {},
                 onClick = {},
                 onLikeClick = {},
                 onSearch = {},

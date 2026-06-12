@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import dev.roasti.feature.auth.domain.repository.AuthRepository
+import dev.roasti.feature.brew.domain.BrewRepository
 import dev.roasti.feature.recipe.domain.RecipeRepository
 import dev.roasti.ui.features.recipepage.mapper.toUiModel
 import dev.roasti.ui.features.recipepage.model.RecipeDetailsUiModel
@@ -24,6 +25,7 @@ class RecipeContentViewModel(
     private val recipeId: String,
     private val repository: RecipeRepository,
     private val authRepository: AuthRepository,
+    private val brewRepository: BrewRepository,
 ) : ViewModel() {
 
     private val refreshStatus = MutableStateFlow<RefreshStatus>(RefreshStatus.Idle)
@@ -81,6 +83,20 @@ class RecipeContentViewModel(
             repository.toggleLike(recipeId).onFailure {
                 _events.tryEmit(UiEvent.ShowError(UiError.Generic))
             }
+        }
+    }
+
+    /** Создаёт Brew из текущего рецепта и навигирует на Brew-экран (Brew-driven заваривание). */
+    fun startBrewing(startStep: Int) {
+        viewModelScope.launch {
+            val recipe = repository.observeById(recipeId).first()
+            if (recipe == null) {
+                _events.tryEmit(UiEvent.ShowError(UiError.Generic))
+                return@launch
+            }
+            brewRepository.startBrew(recipe, startStep)
+                .onSuccess { _navEvents.tryEmit(RecipeContentNavEvent.NavigateToBrew(it.id)) }
+                .onFailure { _events.tryEmit(UiEvent.ShowError(UiError.Generic)) }
         }
     }
 

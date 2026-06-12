@@ -6,9 +6,15 @@ import dev.roasti.navigation.AppNavHost
 import dev.roasti.ui.theme.RoastiTheme
 
 @Composable
-fun App() {
+fun App(
+    deepLinkBrewId: String? = null,
+    onDeepLinkConsumed: () -> Unit = {},
+) {
     RoastiTheme {
-        AppNavHost()
+        AppNavHost(
+            deepLinkBrewId = deepLinkBrewId,
+            onDeepLinkConsumed = onDeepLinkConsumed,
+        )
     }
 }
 

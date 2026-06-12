@@ -12,9 +12,14 @@ sealed class Screen(val route: String) {
         fun createRoute(id: String) = "recipe/$id"
     }
 
-    object RecipeSteps : Screen("recipe/{id}/steps/{startStep}") {
-        fun createRoute(id: String, startStep: Int = 0) = "recipe/$id/steps/$startStep"
+    object Brew : Screen("brew/{brewId}?resume={resume}") {
+        const val ARG_BREW_ID = "brewId"
+        const val ARG_RESUME = "resume"
+        // resume=true только из deep-link уведомления: шаг готов → авто-продвинуть на следующий
+        fun createRoute(brewId: String, resume: Boolean = false) = "brew/$brewId?resume=$resume"
     }
+
+    object BrewHistory : Screen("brew/history")
 
     object EditRecipe : Screen("recipe/{id}/edit") {
         fun createRoute(id: String) = "recipe/$id/edit"

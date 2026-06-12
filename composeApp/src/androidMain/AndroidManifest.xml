@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- exact-alarm не нужен: фоновое ожидание через setAndAllowWhileIdle (inexact) -->
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
     <application
@@ -36,6 +39,24 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Срабатывает по ОС-будильнику фонового шага; package-scoped broadcast -->
+        <receiver
+            android:name=".brew.BrewAlarmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="dev.roasti.action.BREW_READY" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Перепланирование будильников после перезагрузки -->
+        <receiver
+            android:name=".brew.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
