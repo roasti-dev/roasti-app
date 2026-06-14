@@ -177,6 +177,7 @@ private fun CreateRecipeRequestDto.toInput(): CreateRecipeInput? {
       difficulty = difficulty.toDomain(),
       roastLevel = roastLevel.toDomain(),
       beans = beans,
+      // TODO: add the public field.
       public = true,
       steps = steps,
   )

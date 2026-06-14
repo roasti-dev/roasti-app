@@ -3,6 +3,7 @@ package dev.roasti
 import dev.roasti.config.loadConfig
 import dev.roasti.features.uploads.UploadService
 import dev.roasti.plugins.configureAuthentication
+import dev.roasti.plugins.configureCORS
 import dev.roasti.plugins.configureDI
 import dev.roasti.plugins.configureDatabases
 import dev.roasti.plugins.configureLogging
@@ -31,6 +32,7 @@ fun Application.module() {
   configureSerialization()
   configureStatusPages()
   configureRouting()
+  configureCORS()
   startUploadGcJob()
 }
 

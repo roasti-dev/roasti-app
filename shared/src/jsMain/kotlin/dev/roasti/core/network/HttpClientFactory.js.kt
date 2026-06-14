@@ -1,8 +1,8 @@
 package dev.roasti.core.network
 
-import android.util.Log
+import dev.roasti.core.config.AppConfig
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.engine.js.Js
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.logging.LogLevel
@@ -16,23 +16,18 @@ import io.ktor.http.contentType
 import io.ktor.http.encodedPath
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
-import dev.roasti.core.config.AppConfig
 
-private const val KtorLogTag = "KtorHttp"
-
-
+// jsMain
 actual fun createHttpClient(
     accessTokenProvider: () -> String?,
     baseHost: String,
     useHttps: Boolean,
-): HttpClient = HttpClient(OkHttp) {
+): HttpClient = HttpClient(Js) {
     expectSuccess = true
-
+    println("baseHost: $baseHost, useHttps: $useHttps")
     defaultRequest {
         host = baseHost
-        url {
-            protocol = URLProtocol.HTTPS
-        }
+        url { protocol = if (useHttps) URLProtocol.HTTPS else URLProtocol.HTTP }
 
         contentType(ContentType.Application.Json)
 
@@ -53,7 +48,7 @@ actual fun createHttpClient(
     install(Logging) {
         logger = object : Logger {
             override fun log(message: String) {
-                Log.d(KtorLogTag, message)
+                console.log(message)
             }
         }
         level = LogLevel.ALL
