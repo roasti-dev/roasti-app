@@ -12,6 +12,11 @@ internal fun Brew.toActiveCardUiModel(): ActiveBrewCardUiModel = ActiveBrewCardU
     imageUrl = imageId?.let(::imageUrl),
     progress = when (status) {
         BrewStatus.WAITING -> ActiveBrewProgress.Waiting(waitUntil ?: 0L)
-        else -> ActiveBrewProgress.Brewing(currentStepIndex + 1, steps.size)
+        // currentStepIndex может быть за последним шагом (все пройдены, ждём финал) — не даём счётчику
+        // переполниться (например 6/5).
+        else -> ActiveBrewProgress.Brewing(
+            currentStep = (currentStepIndex + 1).coerceAtMost(steps.size),
+            totalSteps = steps.size,
+        )
     },
 )

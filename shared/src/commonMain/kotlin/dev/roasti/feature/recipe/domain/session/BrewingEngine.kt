@@ -223,9 +223,12 @@ class BrewingEngine(
             config: BrewingEngineConfig = BrewingEngineConfig(),
         ): BrewingEngine {
             require(steps.isNotEmpty()) { "Brew has no steps" }
+            // startStep за последним шагом = все шаги пройдены (фоновый был последним) → сразу
+            // финальный экран, без перезапуска таймера последнего шага.
+            val allStepsDone = startStep > steps.lastIndex
             val safeStart = startStep.coerceIn(0, steps.lastIndex)
             val firstStep = steps[safeStart]
-            val shouldAutoStart = (firstStep.durationSeconds ?: 0) > 0
+            val shouldAutoStart = !allStepsDone && (firstStep.durationSeconds ?: 0) > 0
             val initialTimer = StepTimerState.forStep(
                 durationSeconds = firstStep.durationSeconds,
                 isRunning = shouldAutoStart,
@@ -237,7 +240,7 @@ class BrewingEngine(
                 steps = steps,
                 currentStepIndex = safeStart,
                 expandedStepIndex = safeStart,
-                isFinished = false,
+                isFinished = allStepsDone,
                 timer = initialTimer,
                 autoAdvance = autoAdvance,
                 pendingAutoAdvance = null,
